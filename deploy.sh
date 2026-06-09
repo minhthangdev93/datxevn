@@ -1,4 +1,5 @@
 #!/bin/bash
+# VPS: clone repo vào /www/wwwroot/deploy/datxevn rồi chạy script này.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
