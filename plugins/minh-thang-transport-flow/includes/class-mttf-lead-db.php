@@ -118,7 +118,74 @@ class MTTF_Lead_DB {
 	}
 
 	/**
-	 * @param array{route_id?:int|string,phone?:string,paged?:int,per_page?:int} $args Filters.
+	 * Preset landing pages for Ads reporting.
+	 *
+	 * @return array<string,array{label:string,path:string}>
+	 */
+	public static function landing_presets() {
+		return array(
+			'hk-buslines'  => array(
+				'label' => 'HK Buslines',
+				'path'  => '/nha-xe/hk-buslines',
+			),
+			'g8-open-tour' => array(
+				'label' => 'G8 Open Tour',
+				'path'  => '/nha-xe/g8-open-tour',
+			),
+		);
+	}
+
+	/**
+	 * Count leads whose source_url contains a path fragment.
+	 *
+	 * @param string $path_fragment e.g. /nha-xe/hk-buslines
+	 * @return int
+	 */
+	public static function count_by_source_path( $path_fragment ) {
+		$path_fragment = self::normalize_source_path( $path_fragment );
+		if ( '' === $path_fragment ) {
+			return 0;
+		}
+
+		$r = self::query_leads(
+			array(
+				'source_path' => $path_fragment,
+				'paged'       => 1,
+				'per_page'    => 10,
+			)
+		);
+
+		return (int) $r['total'];
+	}
+
+	/**
+	 * @param string $raw Raw path or landing key.
+	 * @return string Normalized path fragment without trailing slash.
+	 */
+	public static function normalize_source_path( $raw ) {
+		$raw = trim( (string) $raw );
+		if ( '' === $raw ) {
+			return '';
+		}
+
+		$presets = self::landing_presets();
+		if ( isset( $presets[ $raw ] ) ) {
+			return $presets[ $raw ]['path'];
+		}
+
+		$path = wp_parse_url( $raw, PHP_URL_PATH );
+		if ( is_string( $path ) && '' !== $path ) {
+			$raw = $path;
+		}
+
+		$raw = '/' . ltrim( $raw, '/' );
+		$raw = untrailingslashit( $raw );
+
+		return $raw;
+	}
+
+	/**
+	 * @param array{route_id?:int|string,phone?:string,source_path?:string,paged?:int,per_page?:int,export_cap?:int} $args Filters.
 	 * @return array{items:array<int,object>,total:int}
 	 */
 	public static function query_leads( $args ) {
@@ -140,6 +207,12 @@ class MTTF_Lead_DB {
 		if ( $route_id > 0 ) {
 			$where[]  = 'route_id = %d';
 			$params[] = $route_id;
+		}
+
+		$source_path = isset( $args['source_path'] ) ? self::normalize_source_path( $args['source_path'] ) : '';
+		if ( '' !== $source_path ) {
+			$where[]  = 'source_url LIKE %s';
+			$params[] = '%' . $wpdb->esc_like( $source_path ) . '%';
 		}
 
 		$phone_q = isset( $args['phone'] ) ? trim( (string) $args['phone'] ) : '';

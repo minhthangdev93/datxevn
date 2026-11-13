@@ -36,6 +36,23 @@ class MTTF_Lead_Admin {
 		);
 	}
 
+	/**
+	 * @return string Current landing filter key or path.
+	 */
+	public static function current_landing_filter() {
+		$raw = isset( $_REQUEST['landing'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['landing'] ) ) : '';
+		if ( '' === $raw ) {
+			return '';
+		}
+
+		$presets = MTTF_Lead_DB::landing_presets();
+		if ( isset( $presets[ $raw ] ) ) {
+			return $raw;
+		}
+
+		return MTTF_Lead_DB::normalize_source_path( $raw );
+	}
+
 	public static function maybe_export_csv() {
 		if ( ! is_admin() || ! isset( $_GET['page'], $_GET['mttf_export_csv'], $_GET['_wpnonce'] ) ) {
 			return;
@@ -51,12 +68,15 @@ class MTTF_Lead_Admin {
 
 		check_admin_referer( 'mttf_export_csv' );
 
-		$f_route = isset( $_GET['route_id'] ) ? absint( $_GET['route_id'] ) : 0;
-		$f_phone = isset( $_GET['phone'] ) ? sanitize_text_field( wp_unslash( $_GET['phone'] ) ) : '';
+		$f_route   = isset( $_GET['route_id'] ) ? absint( $_GET['route_id'] ) : 0;
+		$f_phone   = isset( $_GET['phone'] ) ? sanitize_text_field( wp_unslash( $_GET['phone'] ) ) : '';
+		$f_landing = self::current_landing_filter();
+
+		$suffix = '' !== $f_landing ? '-' . sanitize_file_name( $f_landing ) : '';
 
 		nocache_headers();
 		header( 'Content-Type: text/csv; charset=utf-8' );
-		header( 'Content-Disposition: attachment; filename=mttf-leads-' . gmdate( 'Y-m-d-His' ) . '.csv' );
+		header( 'Content-Disposition: attachment; filename=mttf-leads' . $suffix . '-' . gmdate( 'Y-m-d-His' ) . '.csv' );
 
 		$out = fopen( 'php://output', 'w' );
 		if ( false === $out ) {
@@ -72,39 +92,46 @@ class MTTF_Lead_Admin {
 				'ID',
 				'Ngày giờ',
 				'SĐT',
-				'ID tuyến',
-				'Slug tuyến',
-				'Tên tuyến',
+				'Tên dịch vụ / tuyến',
+				'Slug dịch vụ',
+				'Landing (URL nguồn)',
 				'Miền',
-				'App quốc tế',
-				'URL nguồn',
+				'App liên hệ',
 				'UTM/Click JSON',
 			)
 		);
 
 		$r = MTTF_Lead_DB::query_leads(
 			array(
-				'route_id'   => $f_route,
-				'phone'      => $f_phone,
-				'paged'      => 1,
-				'per_page'   => 25,
-				'export_cap' => 12000,
+				'route_id'    => $f_route,
+				'phone'       => $f_phone,
+				'source_path' => $f_landing,
+				'paged'       => 1,
+				'per_page'    => 25,
+				'export_cap'  => 12000,
 			)
 		);
 
 		foreach ( $r['items'] as $row ) {
+			$created = isset( $row->created_at ) ? (string) $row->created_at : '';
+			if ( '' !== $created ) {
+				$ts = strtotime( $created );
+				if ( false !== $ts ) {
+					$created = wp_date( 'd/m/Y H:i:s', $ts );
+				}
+			}
+
 			fputcsv(
 				$out,
 				array(
 					(int) $row->id,
-					isset( $row->created_at ) ? (string) $row->created_at : '',
+					$created,
 					isset( $row->phone ) ? (string) $row->phone : '',
-					(int) $row->route_id,
-					isset( $row->route_slug ) ? (string) $row->route_slug : '',
 					isset( $row->route_title ) ? (string) $row->route_title : '',
+					isset( $row->route_slug ) ? (string) $row->route_slug : '',
+					isset( $row->source_url ) ? (string) $row->source_url : '',
 					isset( $row->hub_region ) ? (string) $row->hub_region : '',
 					isset( $row->contact_apps ) ? (string) $row->contact_apps : '',
-					isset( $row->source_url ) ? (string) $row->source_url : '',
 					isset( $row->utm_json ) ? (string) $row->utm_json : '',
 				)
 			);
@@ -131,15 +158,17 @@ class MTTF_Lead_Admin {
 				'fields'         => 'ids',
 			)
 		);
-		$route_sel = isset( $_GET['route_id'] ) ? absint( $_GET['route_id'] ) : 0;
-		$phone_q   = isset( $_GET['phone'] ) ? sanitize_text_field( wp_unslash( $_GET['phone'] ) ) : '';
+		$route_sel   = isset( $_GET['route_id'] ) ? absint( $_GET['route_id'] ) : 0;
+		$phone_q     = isset( $_GET['phone'] ) ? sanitize_text_field( wp_unslash( $_GET['phone'] ) ) : '';
+		$landing_sel = self::current_landing_filter();
+		$presets     = MTTF_Lead_DB::landing_presets();
 
 		$list->prepare_items();
 
 		$export_args = array(
-			'post_type'         => 'tuyen_xe',
-			'page'              => 'mttf-leads',
-			'mttf_export_csv'   => '1',
+			'post_type'       => 'tuyen_xe',
+			'page'            => 'mttf-leads',
+			'mttf_export_csv' => '1',
 		);
 		if ( $route_sel > 0 ) {
 			$export_args['route_id'] = (string) $route_sel;
@@ -147,18 +176,62 @@ class MTTF_Lead_Admin {
 		if ( '' !== $phone_q ) {
 			$export_args['phone'] = $phone_q;
 		}
+		if ( '' !== $landing_sel ) {
+			$export_args['landing'] = $landing_sel;
+		}
 		$url_export = wp_nonce_url( add_query_arg( $export_args, admin_url( 'edit.php' ) ), 'mttf_export_csv' );
 
 		$total_global = MTTF_Lead_DB::count_all();
 
 		echo '<div class="wrap">';
-		echo '<h1>Lead đặt tuyến (MTTF)</h1>';
+		echo '<h1>Lead & thống kê đặt vé (MTTF)</h1>';
+
+		if ( MTTF_Lead_DB::table_exists() ) {
+			echo '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:16px 0 8px;max-width:960px;">';
+			printf(
+				'<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:14px 16px;"><div style="color:#646970;font-size:12px;">Tổng lead toàn site</div><div style="font-size:22px;font-weight:600;margin-top:4px;">%s</div></div>',
+				esc_html( number_format_i18n( $total_global ) )
+			);
+			foreach ( $presets as $key => $preset ) {
+				$count = MTTF_Lead_DB::count_by_source_path( $key );
+				$url   = add_query_arg(
+					array(
+						'post_type' => 'tuyen_xe',
+						'page'      => 'mttf-leads',
+						'landing'   => $key,
+					),
+					admin_url( 'edit.php' )
+				);
+				printf(
+					'<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:14px 16px;"><div style="color:#646970;font-size:12px;">%s</div><div style="font-size:22px;font-weight:600;margin-top:4px;">%s</div><div style="margin-top:8px;"><a href="%s">Xem danh sách →</a></div><div style="color:#646970;font-size:11px;margin-top:4px;"><code>%s</code></div></div>',
+					esc_html( $preset['label'] ),
+					esc_html( number_format_i18n( $count ) ),
+					esc_url( $url ),
+					esc_html( $preset['path'] . '/' )
+				);
+			}
+			echo '</div>';
+		}
 
 		echo '<form method="get" id="mttf-leads-form" action="' . esc_url( admin_url( 'edit.php' ) ) . '">';
 		echo '<input type="hidden" name="post_type" value="tuyen_xe">';
 		echo '<input type="hidden" name="page" value="mttf-leads">';
 		echo '<div style="display:flex;align-items:flex-end;gap:10px;margin:16px 0 14px;flex-wrap:wrap;">';
-		echo '<label><span>Tuyến:</span>&nbsp;<select name="route_id">';
+
+		echo '<label><span>Landing Ads:</span>&nbsp;<select name="landing">';
+		echo '<option value="">— Tất cả landing —</option>';
+		foreach ( $presets as $key => $preset ) {
+			printf(
+				'<option value="%s" %s>%s (%s)</option>',
+				esc_attr( $key ),
+				selected( $landing_sel, $key, false ),
+				esc_html( $preset['label'] ),
+				esc_html( $preset['path'] )
+			);
+		}
+		echo '</select></label>';
+
+		echo '<label><span>Dịch vụ / tuyến:</span>&nbsp;<select name="route_id">';
 		echo '<option value="0">— Tất cả —</option>';
 		foreach ( $routes as $rid ) {
 			$t = get_the_title( $rid );
@@ -176,16 +249,15 @@ class MTTF_Lead_Admin {
 
 		if ( MTTF_Lead_DB::table_exists() ) {
 			printf(
-				'<p>Tổng lead khớp bộ lọc hiện tại: <strong>%d</strong>. Đã lưu trong hệ thống (toàn cục): <strong>%d</strong>.</p>',
-				(int) $list->_total_filtered,
-				(int) $total_global
+				'<p>Tổng lead khớp bộ lọc hiện tại: <strong>%d</strong>.</p>',
+				(int) $list->_total_filtered
 			);
 		} else {
 			echo '<p>Bảng lead chưa sẵn sàng — thử load lại trang sau khi plugin cập nhật.</p>';
 		}
 
-		echo '<p><a class="button button-primary" href="' . esc_url( $url_export ) . '">Xuất CSV (tối đa 12000 dòng, theo lọc)</a>';
-		echo ' <span class="description">Nội bộ — file chứa SĐT đầy đủ.</span></p>';
+		echo '<p><a class="button button-primary" href="' . esc_url( $url_export ) . '">Xuất Excel (CSV)</a>';
+		echo ' <span class="description">Theo bộ lọc hiện tại · tối đa 12.000 dòng · mở bằng Excel được.</span></p>';
 
 		$list->display();
 		echo '</form>';
@@ -209,12 +281,12 @@ class MTTF_Leads_List_Table extends WP_List_Table {
 
 	public function get_columns() {
 		return array(
-			'created_at'   => 'Thời gian',
+			'created_at'   => 'Ngày giờ gửi',
 			'phone'        => 'SĐT',
-			'route_title'  => 'Tuyến',
+			'route_title'  => 'Tên dịch vụ / tuyến',
 			'hub_region'   => 'Miền',
-			'contact_apps' => 'App',
-			'source_short' => 'Nguồn',
+			'contact_apps' => 'App liên hệ',
+			'source_short' => 'Landing / URL nguồn',
 		);
 	}
 
@@ -277,7 +349,19 @@ class MTTF_Leads_List_Table extends WP_List_Table {
 			return '—';
 		}
 
-		return '<span title="' . esc_attr( $u ) . '">' . esc_html( wp_trim_words( $u, 5, '…' ) ) . '</span>';
+		$path = wp_parse_url( $u, PHP_URL_PATH );
+		$path = is_string( $path ) ? untrailingslashit( $path ) : $u;
+		$label = $path;
+
+		$presets = MTTF_Lead_DB::landing_presets();
+		foreach ( $presets as $preset ) {
+			if ( false !== strpos( $u, $preset['path'] ) ) {
+				$label = $preset['label'] . ' — ' . $preset['path'];
+				break;
+			}
+		}
+
+		return '<a href="' . esc_url( $u ) . '" target="_blank" rel="noopener noreferrer" title="' . esc_attr( $u ) . '">' . esc_html( $label ) . '</a>';
 	}
 
 	public function no_items() {
@@ -285,9 +369,10 @@ class MTTF_Leads_List_Table extends WP_List_Table {
 	}
 
 	public function prepare_items() {
-		$f_route = isset( $_REQUEST['route_id'] ) ? absint( wp_unslash( $_REQUEST['route_id'] ) ) : 0;
-		$f_phone = isset( $_REQUEST['phone'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['phone'] ) ) : '';
-		$pp      = MTTF_Lead_Admin::sanitize_per_page();
+		$f_route   = isset( $_REQUEST['route_id'] ) ? absint( wp_unslash( $_REQUEST['route_id'] ) ) : 0;
+		$f_phone   = isset( $_REQUEST['phone'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['phone'] ) ) : '';
+		$f_landing = MTTF_Lead_Admin::current_landing_filter();
+		$pp        = MTTF_Lead_Admin::sanitize_per_page();
 
 		$paged = $this->get_pagenum();
 		if ( $paged < 1 ) {
@@ -296,10 +381,11 @@ class MTTF_Leads_List_Table extends WP_List_Table {
 
 		$res = MTTF_Lead_DB::query_leads(
 			array(
-				'route_id' => $f_route,
-				'phone'    => $f_phone,
-				'paged'    => $paged,
-				'per_page' => $pp,
+				'route_id'    => $f_route,
+				'phone'       => $f_phone,
+				'source_path' => $f_landing,
+				'paged'       => $paged,
+				'per_page'    => $pp,
 			)
 		);
 
