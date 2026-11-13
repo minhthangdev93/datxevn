@@ -54,6 +54,39 @@
     return out;
   }
 
+  /**
+   * Detect Ads landing context from URL for split conversion events.
+   * /nha-xe/hk-buslines/ → type=nha_xe, slug=hk_buslines, event=mttf_lead_nha_xe_hk_buslines
+   * /tuyen/ha-noi-sapa/  → type=tuyen, slug=ha_noi_sapa, event=mttf_lead_tuyen_ha_noi_sapa
+   */
+  function getLandingContext() {
+    var path = (window.location.pathname || "").replace(/\/+$/, "") || "/";
+    var landingType = "";
+    var landingSlug = "";
+    var match = path.match(/\/(nha-xe|tuyen)\/([^\/]+)\/?$/i);
+
+    if (match) {
+      landingType = String(match[1]).toLowerCase() === "nha-xe" ? "nha_xe" : "tuyen";
+      landingSlug = String(match[2])
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+    }
+
+    var landingEvent = "";
+    if (landingType && landingSlug) {
+      landingEvent = "mttf_lead_" + landingType + "_" + landingSlug;
+    }
+
+    return {
+      page_path: path,
+      page_url: window.location.href || "",
+      landing_type: landingType,
+      landing_slug: landingSlug,
+      landing_event: landingEvent,
+    };
+  }
+
   function setTouchData() {
     var params = getQueryParams();
     if (!Object.keys(params).length) {
@@ -303,17 +336,39 @@
               (mMeas.eventName &&
                 String(mMeas.eventName).replace(/^\s+|\s+$/g, "")) ||
               "mttf_lead_submit";
+            var landing = getLandingContext();
             var basePayload = {
               event: evName,
               route_id: form.route_id.value,
               route_slug: form.route_slug.value,
+              page_path: landing.page_path,
+              page_url: landing.page_url,
+              landing_type: landing.landing_type,
+              landing_slug: landing.landing_slug,
             };
             window.dataLayer.push(basePayload);
+
+            // Event riêng theo landing (để tách conversion Google Ads / GTM).
+            if (landing.landing_event) {
+              window.dataLayer.push({
+                event: landing.landing_event,
+                route_id: basePayload.route_id,
+                route_slug: basePayload.route_slug,
+                page_path: basePayload.page_path,
+                page_url: basePayload.page_url,
+                landing_type: basePayload.landing_type,
+                landing_slug: basePayload.landing_slug,
+              });
+            }
+
             if (parseInt(mMeas.duplicateGa4, 10) === 1) {
               window.dataLayer.push({
                 event: "generate_lead",
                 route_id: basePayload.route_id,
                 route_slug: basePayload.route_slug,
+                page_path: basePayload.page_path,
+                landing_type: basePayload.landing_type,
+                landing_slug: basePayload.landing_slug,
               });
             }
           }

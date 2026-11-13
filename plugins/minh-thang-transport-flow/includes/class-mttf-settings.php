@@ -973,10 +973,28 @@ class MTTF_Settings {
 		<div class="mttf-measurement-guide">
 			<p><strong>Biến có sẵn trên dataLayer</strong> mỗi khi lead thành công (khi bạn bật gửi sự kiện):</p>
 			<ul style="margin:0 0 1rem;padding-left:1.25rem;">
-				<li><code>route_id</code> — ID tuyến (post)</li>
-				<li><code>route_slug</code> — slug tuyến</li>
-				<li>Nếu bật thêm GA4 khuyến nghị: sự kiện thứ hai <code>generate_lead</code> (cùng biến trên)</li>
+				<li><code>route_id</code> — ID dịch vụ trên card</li>
+				<li><code>route_slug</code> — slug dịch vụ trên card</li>
+				<li><code>page_path</code> — đường dẫn trang landing (vd. <code>/nha-xe/hk-buslines</code>)</li>
+				<li><code>landing_type</code> — <code>nha_xe</code> hoặc <code>tuyen</code></li>
+				<li><code>landing_slug</code> — slug landing (vd. <code>hk_buslines</code>)</li>
+				<li>Event chung: <code><?php echo $event_slug; ?></code></li>
+				<li>Event riêng theo landing: <code>mttf_lead_nha_xe_hk_buslines</code>, <code>mttf_lead_nha_xe_g8_open_tour</code>, …</li>
+				<li>Nếu bật thêm GA4 khuyến nghị: sự kiện thứ hai <code>generate_lead</code></li>
 			</ul>
+
+			<h3>Tách conversion Google Ads theo landing Ads (HK / G8)</h3>
+			<ol>
+				<li>Trên Google Ads tạo <strong>2 conversion action</strong> riêng (vd. Lead HK Buslines, Lead G8 Open Tour).</li>
+				<li>Trong GTM tạo 2 trigger <strong>Custom Event</strong>:
+					<ul>
+						<li>Event name = <code>mttf_lead_nha_xe_hk_buslines</code> (trang <code>/nha-xe/hk-buslines/</code>)</li>
+						<li>Event name = <code>mttf_lead_nha_xe_g8_open_tour</code> (trang <code>/nha-xe/g8-open-tour/</code>)</li>
+					</ul>
+				</li>
+				<li>Gắn mỗi trigger với 1 thẻ <strong>Google Ads Conversion Tracking</strong> (Conversion ID + Label tương ứng).</li>
+				<li>Giữ thêm 1 thẻ (tuỳ chọn) gắn trigger <code><?php echo $event_slug; ?></code> nếu muốn conversion tổng site.</li>
+			</ol>
 
 			<h3>Bước A — Chuẩn bị GA4</h3>
 			<ol>
