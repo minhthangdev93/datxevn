@@ -6,7 +6,7 @@
 
  * Description: Hub card booking flow for limousine routes with quick lead capture.
 
- * Version: 1.3.2
+ * Version: 1.3.3
 
  * Author: Minh Thang
 
@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 
 
-define( 'MTTF_VERSION', '1.3.2' );
+define( 'MTTF_VERSION', '1.3.3' );
 
 define( 'MTTF_PATH', plugin_dir_path( __FILE__ ) );
 

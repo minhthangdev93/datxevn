@@ -118,30 +118,125 @@ class MTTF_Lead_DB {
 	}
 
 	/**
-	 * Preset landing pages for Ads reporting.
+	 * All nhà xe operators for stats (from taxonomy).
 	 *
-	 * @return array<string,array{label:string,path:string}>
+	 * @return array<string,array{label:string,path:string,term_id:int,slug:string}>
 	 */
-	public static function landing_presets() {
-		return array(
-			'hk-buslines'  => array(
-				'label' => 'HK Buslines',
-				'path'  => '/nha-xe/hk-buslines',
-			),
-			'g8-open-tour' => array(
-				'label' => 'G8 Open Tour',
-				'path'  => '/nha-xe/g8-open-tour',
-			),
+	public static function get_nha_xe_operators() {
+		$taxonomy = class_exists( 'MTTF_Landing_Taxonomies' )
+			? MTTF_Landing_Taxonomies::TAX_NHA_XE
+			: 'mttf_nha_xe';
+
+		$terms = get_terms(
+			array(
+				'taxonomy'   => $taxonomy,
+				'hide_empty' => false,
+				'orderby'    => 'name',
+				'order'      => 'ASC',
+			)
 		);
+
+		$out = array();
+		if ( is_wp_error( $terms ) || empty( $terms ) ) {
+			return $out;
+		}
+
+		foreach ( $terms as $term ) {
+			if ( ! $term instanceof WP_Term ) {
+				continue;
+			}
+			$slug = sanitize_title( (string) $term->slug );
+			if ( '' === $slug ) {
+				continue;
+			}
+			$out[ $slug ] = array(
+				'label'   => (string) $term->name,
+				'path'    => '/nha-xe/' . $slug,
+				'term_id' => (int) $term->term_id,
+				'slug'    => $slug,
+			);
+		}
+
+		return $out;
 	}
 
 	/**
-	 * Count leads whose source_url contains a path fragment.
+	 * Alias kept for older call sites.
 	 *
-	 * @param string $path_fragment e.g. /nha-xe/hk-buslines
+	 * @return array<string,array{label:string,path:string,term_id?:int,slug?:string}>
+	 */
+	public static function landing_presets() {
+		return self::get_nha_xe_operators();
+	}
+
+	/**
+	 * Route post IDs belonging to a nhà xe term slug.
+	 *
+	 * @param string $slug Operator slug.
+	 * @return int[]
+	 */
+	public static function get_route_ids_for_nha_xe( $slug ) {
+		$slug = sanitize_title( (string) $slug );
+		if ( '' === $slug ) {
+			return array();
+		}
+
+		$taxonomy = class_exists( 'MTTF_Landing_Taxonomies' )
+			? MTTF_Landing_Taxonomies::TAX_NHA_XE
+			: 'mttf_nha_xe';
+
+		$ids = get_posts(
+			array(
+				'post_type'      => 'tuyen_xe',
+				'post_status'    => array( 'publish', 'draft', 'private' ),
+				'posts_per_page' => 1000,
+				'fields'         => 'ids',
+				'tax_query'      => array(
+					array(
+						'taxonomy' => $taxonomy,
+						'field'    => 'slug',
+						'terms'    => array( $slug ),
+					),
+				),
+			)
+		);
+
+		return array_map( 'absint', is_array( $ids ) ? $ids : array() );
+	}
+
+	/**
+	 * Count leads attributed to a nhà xe (landing URL or route belonging to operator).
+	 *
+	 * @param string $slug Operator slug.
+	 * @return int
+	 */
+	public static function count_by_nha_xe( $slug ) {
+		$slug = sanitize_title( (string) $slug );
+		if ( '' === $slug ) {
+			return 0;
+		}
+
+		$r = self::query_leads(
+			array(
+				'nha_xe'   => $slug,
+				'paged'    => 1,
+				'per_page' => 10,
+			)
+		);
+
+		return (int) $r['total'];
+	}
+
+	/**
+	 * @param string $path_fragment e.g. /nha-xe/hk-buslines or slug hk-buslines
 	 * @return int
 	 */
 	public static function count_by_source_path( $path_fragment ) {
+		$slug = self::extract_nha_xe_slug( $path_fragment );
+		if ( '' !== $slug ) {
+			return self::count_by_nha_xe( $slug );
+		}
+
 		$path_fragment = self::normalize_source_path( $path_fragment );
 		if ( '' === $path_fragment ) {
 			return 0;
@@ -159,6 +254,69 @@ class MTTF_Lead_DB {
 	}
 
 	/**
+	 * @param string $raw Slug, path, or URL.
+	 * @return string Nhà xe slug or empty.
+	 */
+	public static function extract_nha_xe_slug( $raw ) {
+		$raw = trim( (string) $raw );
+		if ( '' === $raw ) {
+			return '';
+		}
+
+		$operators = self::get_nha_xe_operators();
+		if ( isset( $operators[ $raw ] ) ) {
+			return $raw;
+		}
+
+		$path = wp_parse_url( $raw, PHP_URL_PATH );
+		if ( is_string( $path ) && '' !== $path ) {
+			$raw = $path;
+		}
+
+		if ( preg_match( '#/nha-xe/([^/]+)/?#i', $raw, $m ) ) {
+			$slug = sanitize_title( $m[1] );
+			return $slug;
+		}
+
+		$slug = sanitize_title( ltrim( $raw, '/' ) );
+		if ( isset( $operators[ $slug ] ) ) {
+			return $slug;
+		}
+
+		return '';
+	}
+
+	/**
+	 * Resolve nhà xe name for a stored lead row.
+	 *
+	 * @param object $row Lead row.
+	 * @return string
+	 */
+	public static function resolve_nha_xe_label_for_lead( $row ) {
+		$source = isset( $row->source_url ) ? (string) $row->source_url : '';
+		$slug   = self::extract_nha_xe_slug( $source );
+		if ( '' !== $slug ) {
+			$ops = self::get_nha_xe_operators();
+			if ( isset( $ops[ $slug ] ) ) {
+				return $ops[ $slug ]['label'];
+			}
+		}
+
+		$route_id = isset( $row->route_id ) ? absint( $row->route_id ) : 0;
+		$taxonomy = class_exists( 'MTTF_Landing_Taxonomies' )
+			? MTTF_Landing_Taxonomies::TAX_NHA_XE
+			: 'mttf_nha_xe';
+		if ( $route_id > 0 && taxonomy_exists( $taxonomy ) ) {
+			$terms = wp_get_post_terms( $route_id, $taxonomy );
+			if ( ! is_wp_error( $terms ) && ! empty( $terms[0] ) ) {
+				return (string) $terms[0]->name;
+			}
+		}
+
+		return '';
+	}
+
+	/**
 	 * @param string $raw Raw path or landing key.
 	 * @return string Normalized path fragment without trailing slash.
 	 */
@@ -168,9 +326,9 @@ class MTTF_Lead_DB {
 			return '';
 		}
 
-		$presets = self::landing_presets();
-		if ( isset( $presets[ $raw ] ) ) {
-			return $presets[ $raw ]['path'];
+		$slug = self::extract_nha_xe_slug( $raw );
+		if ( '' !== $slug ) {
+			return '/nha-xe/' . $slug;
 		}
 
 		$path = wp_parse_url( $raw, PHP_URL_PATH );
@@ -185,7 +343,7 @@ class MTTF_Lead_DB {
 	}
 
 	/**
-	 * @param array{route_id?:int|string,phone?:string,source_path?:string,paged?:int,per_page?:int,export_cap?:int} $args Filters.
+	 * @param array{route_id?:int|string,phone?:string,source_path?:string,nha_xe?:string,paged?:int,per_page?:int,export_cap?:int} $args Filters.
 	 * @return array{items:array<int,object>,total:int}
 	 */
 	public static function query_leads( $args ) {
@@ -209,10 +367,34 @@ class MTTF_Lead_DB {
 			$params[] = $route_id;
 		}
 
-		$source_path = isset( $args['source_path'] ) ? self::normalize_source_path( $args['source_path'] ) : '';
-		if ( '' !== $source_path ) {
-			$where[]  = 'source_url LIKE %s';
-			$params[] = '%' . $wpdb->esc_like( $source_path ) . '%';
+		$nha_xe = '';
+		if ( ! empty( $args['nha_xe'] ) ) {
+			$nha_xe = self::extract_nha_xe_slug( (string) $args['nha_xe'] );
+		} elseif ( ! empty( $args['source_path'] ) ) {
+			$nha_xe = self::extract_nha_xe_slug( (string) $args['source_path'] );
+		}
+
+		if ( '' !== $nha_xe ) {
+			$path_like = '%' . $wpdb->esc_like( '/nha-xe/' . $nha_xe ) . '%';
+			$route_ids = self::get_route_ids_for_nha_xe( $nha_xe );
+
+			if ( ! empty( $route_ids ) ) {
+				$placeholders = implode( ',', array_fill( 0, count( $route_ids ), '%d' ) );
+				$where[]      = '( source_url LIKE %s OR route_id IN (' . $placeholders . ') )';
+				$params[]     = $path_like;
+				foreach ( $route_ids as $rid ) {
+					$params[] = (int) $rid;
+				}
+			} else {
+				$where[]  = 'source_url LIKE %s';
+				$params[] = $path_like;
+			}
+		} elseif ( ! empty( $args['source_path'] ) ) {
+			$source_path = self::normalize_source_path( (string) $args['source_path'] );
+			if ( '' !== $source_path ) {
+				$where[]  = 'source_url LIKE %s';
+				$params[] = '%' . $wpdb->esc_like( $source_path ) . '%';
+			}
 		}
 
 		$phone_q = isset( $args['phone'] ) ? trim( (string) $args['phone'] ) : '';
