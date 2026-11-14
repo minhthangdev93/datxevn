@@ -72,6 +72,19 @@ function ensureSheet_(name, headers) {
   return sh;
 }
 
+/**
+ * Ghi mảng 2D xuống sheet — số hàng range luôn khớp data.
+ */
+function writeBlock_(sheet, startRow, values) {
+  if (!values || !values.length) {
+    return;
+  }
+  var numRows = values.length;
+  var numCols = values[0].length;
+  var endRow = startRow + numRows - 1;
+  sheet.getRange(startRow, 1, endRow, numCols).setValues(values);
+}
+
 function loadExistingIds_(sheet) {
   var last = sheet.getLastRow();
   var map = {};
@@ -154,10 +167,9 @@ function syncLeads() {
   }
 
   if (toAppend.length) {
-    var startRow = sheet.getLastRow() + 1;
-    sheet
-      .getRange(startRow, 1, startRow + toAppend.length - 1, LEADS_HEADERS.length)
-      .setValues(toAppend);
+    // Không ghi đè hàng header (row 1).
+    var startRow = Math.max(sheet.getLastRow() + 1, 2);
+    writeBlock_(sheet, startRow, toAppend);
   }
 
   if (maxCreated) {
@@ -191,7 +203,6 @@ function rebuildCustomerMatch() {
       }
       var nha = String(rows[i][4] || '');
       var created = String(rows[i][1] || '');
-      // Keep newest (sheet appends older syncs first; API returns newest first per batch).
       if (!phones[phone] || created > phones[phone].created) {
         phones[phone] = { nha: nha, created: created };
       }
@@ -209,9 +220,7 @@ function rebuildCustomerMatch() {
   match.clearContents();
   match.getRange(1, 1, 1, 3).setValues([['Phone', 'nha_xe', 'last_created_at']]);
   match.setFrozenRows(1);
-  if (out.length) {
-    match.getRange(2, 1, out.length, 3).setValues(out);
-  }
+  writeBlock_(match, 2, out);
 }
 
 /** One-time: clear LAST_SYNC to re-pull from beginning (still skips existing ids). */
