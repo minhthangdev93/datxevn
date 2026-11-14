@@ -59,6 +59,46 @@ class MTTF_Lead_Admin {
 		return self::current_nha_xe_filter();
 	}
 
+	/**
+	 * Sanitize a Y-m-d date from request.
+	 *
+	 * @param string $key Request key (date_from / date_to).
+	 * @return string Y-m-d or empty.
+	 */
+	public static function current_date_param( $key ) {
+		$raw = isset( $_REQUEST[ $key ] ) ? sanitize_text_field( wp_unslash( $_REQUEST[ $key ] ) ) : '';
+		$raw = trim( $raw );
+		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $raw ) ) {
+			return '';
+		}
+
+		$parts = array_map( 'intval', explode( '-', $raw ) );
+		if ( count( $parts ) !== 3 || ! checkdate( $parts[1], $parts[2], $parts[0] ) ) {
+			return '';
+		}
+
+		return $raw;
+	}
+
+	/**
+	 * @return array{date_from:string,date_to:string} MySQL datetime bounds (empty if unset).
+	 */
+	public static function current_date_bounds() {
+		$from = self::current_date_param( 'date_from' );
+		$to   = self::current_date_param( 'date_to' );
+
+		if ( '' !== $from && '' !== $to && $from > $to ) {
+			$tmp  = $from;
+			$from = $to;
+			$to   = $tmp;
+		}
+
+		return array(
+			'date_from' => '' !== $from ? $from . ' 00:00:00' : '',
+			'date_to'   => '' !== $to ? $to . ' 23:59:59' : '',
+		);
+	}
+
 	public static function maybe_export_csv() {
 		if ( ! is_admin() || ! isset( $_GET['page'], $_GET['mttf_export_csv'], $_GET['_wpnonce'] ) ) {
 			return;
@@ -77,6 +117,7 @@ class MTTF_Lead_Admin {
 		$f_route  = isset( $_GET['route_id'] ) ? absint( $_GET['route_id'] ) : 0;
 		$f_phone  = isset( $_GET['phone'] ) ? sanitize_text_field( wp_unslash( $_GET['phone'] ) ) : '';
 		$f_nha_xe = self::current_nha_xe_filter();
+		$dates    = self::current_date_bounds();
 
 		$suffix = '' !== $f_nha_xe ? '-' . sanitize_file_name( $f_nha_xe ) : '';
 
@@ -113,6 +154,8 @@ class MTTF_Lead_Admin {
 				'route_id'   => $f_route,
 				'phone'      => $f_phone,
 				'nha_xe'     => $f_nha_xe,
+				'date_from'  => $dates['date_from'],
+				'date_to'    => $dates['date_to'],
 				'paged'      => 1,
 				'per_page'   => 25,
 				'export_cap' => 12000,
@@ -166,10 +209,14 @@ class MTTF_Lead_Admin {
 				'fields'         => 'ids',
 			)
 		);
-		$route_sel = isset( $_GET['route_id'] ) ? absint( $_GET['route_id'] ) : 0;
-		$phone_q   = isset( $_GET['phone'] ) ? sanitize_text_field( wp_unslash( $_GET['phone'] ) ) : '';
+		$route_sel  = isset( $_GET['route_id'] ) ? absint( $_GET['route_id'] ) : 0;
+		$phone_q    = isset( $_GET['phone'] ) ? sanitize_text_field( wp_unslash( $_GET['phone'] ) ) : '';
 		$nha_xe_sel = self::current_nha_xe_filter();
+		$date_from  = self::current_date_param( 'date_from' );
+		$date_to    = self::current_date_param( 'date_to' );
+		$dates      = self::current_date_bounds();
 		$operators  = MTTF_Lead_DB::get_nha_xe_operators();
+		$has_dates  = '' !== $dates['date_from'] || '' !== $dates['date_to'];
 
 		$list->prepare_items();
 
@@ -187,9 +234,24 @@ class MTTF_Lead_Admin {
 		if ( '' !== $nha_xe_sel ) {
 			$export_args['nha_xe'] = $nha_xe_sel;
 		}
+		if ( '' !== $date_from ) {
+			$export_args['date_from'] = $date_from;
+		}
+		if ( '' !== $date_to ) {
+			$export_args['date_to'] = $date_to;
+		}
 		$url_export = wp_nonce_url( add_query_arg( $export_args, admin_url( 'edit.php' ) ), 'mttf_export_csv' );
 
-		$total_global = MTTF_Lead_DB::count_all();
+		$total_global = $has_dates
+			? (int) MTTF_Lead_DB::query_leads(
+				array(
+					'date_from' => $dates['date_from'],
+					'date_to'   => $dates['date_to'],
+					'paged'     => 1,
+					'per_page'  => 10,
+				)
+			)['total']
+			: MTTF_Lead_DB::count_all();
 
 		echo '<div class="wrap">';
 		echo '<h1>Lead & thống kê theo nhà xe (MTTF)</h1>';
@@ -197,19 +259,36 @@ class MTTF_Lead_Admin {
 		if ( MTTF_Lead_DB::table_exists() ) {
 			echo '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:16px 0 8px;">';
 			printf(
-				'<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:14px 16px;"><div style="color:#646970;font-size:12px;">Tổng lead toàn site</div><div style="font-size:22px;font-weight:600;margin-top:4px;">%s</div></div>',
+				'<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:14px 16px;"><div style="color:#646970;font-size:12px;">Tổng lead toàn site%s</div><div style="font-size:22px;font-weight:600;margin-top:4px;">%s</div></div>',
+				$has_dates ? ' (theo ngày đã chọn)' : '',
 				esc_html( number_format_i18n( $total_global ) )
 			);
 			foreach ( $operators as $key => $op ) {
-				$count = MTTF_Lead_DB::count_by_nha_xe( $key );
-				$url   = add_query_arg(
-					array(
-						'post_type' => 'tuyen_xe',
-						'page'      => 'mttf-leads',
-						'nha_xe'    => $key,
-					),
-					admin_url( 'edit.php' )
+				if ( $has_dates ) {
+					$count = (int) MTTF_Lead_DB::query_leads(
+						array(
+							'nha_xe'    => $key,
+							'date_from' => $dates['date_from'],
+							'date_to'   => $dates['date_to'],
+							'paged'     => 1,
+							'per_page'  => 10,
+						)
+					)['total'];
+				} else {
+					$count = MTTF_Lead_DB::count_by_nha_xe( $key );
+				}
+				$card_args = array(
+					'post_type' => 'tuyen_xe',
+					'page'      => 'mttf-leads',
+					'nha_xe'    => $key,
 				);
+				if ( '' !== $date_from ) {
+					$card_args['date_from'] = $date_from;
+				}
+				if ( '' !== $date_to ) {
+					$card_args['date_to'] = $date_to;
+				}
+				$url = add_query_arg( $card_args, admin_url( 'edit.php' ) );
 				printf(
 					'<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:14px 16px;"><div style="color:#646970;font-size:12px;">%s</div><div style="font-size:22px;font-weight:600;margin-top:4px;">%s</div><div style="margin-top:8px;"><a href="%s">Xem danh sách →</a></div><div style="color:#646970;font-size:11px;margin-top:4px;"><code>%s</code></div></div>',
 					esc_html( $op['label'] ),
@@ -251,6 +330,8 @@ class MTTF_Lead_Admin {
 			);
 		}
 		echo '</select></label>';
+		echo '<label><span>Từ ngày:</span>&nbsp;<input type="date" name="date_from" value="' . esc_attr( $date_from ) . '"></label>';
+		echo '<label><span>Đến ngày:</span>&nbsp;<input type="date" name="date_to" value="' . esc_attr( $date_to ) . '"></label>';
 		echo '<label><span>SĐT khách:</span>&nbsp;<input type="search" name="phone" class="regular-text" value="' . esc_attr( $phone_q ) . '" placeholder="VD: 097… hoặc +84" autocomplete="off"></label>';
 		submit_button( 'Lọc', 'secondary', '', false );
 		echo '</div>';
@@ -377,6 +458,7 @@ class MTTF_Leads_List_Table extends WP_List_Table {
 		$f_route  = isset( $_REQUEST['route_id'] ) ? absint( wp_unslash( $_REQUEST['route_id'] ) ) : 0;
 		$f_phone  = isset( $_REQUEST['phone'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['phone'] ) ) : '';
 		$f_nha_xe = MTTF_Lead_Admin::current_nha_xe_filter();
+		$dates    = MTTF_Lead_Admin::current_date_bounds();
 		$pp       = MTTF_Lead_Admin::sanitize_per_page();
 
 		$paged = $this->get_pagenum();
@@ -386,11 +468,13 @@ class MTTF_Leads_List_Table extends WP_List_Table {
 
 		$res = MTTF_Lead_DB::query_leads(
 			array(
-				'route_id' => $f_route,
-				'phone'    => $f_phone,
-				'nha_xe'   => $f_nha_xe,
-				'paged'    => $paged,
-				'per_page' => $pp,
+				'route_id'  => $f_route,
+				'phone'     => $f_phone,
+				'nha_xe'    => $f_nha_xe,
+				'date_from' => $dates['date_from'],
+				'date_to'   => $dates['date_to'],
+				'paged'     => $paged,
+				'per_page'  => $pp,
 			)
 		);
 
