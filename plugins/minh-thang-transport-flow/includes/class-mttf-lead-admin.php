@@ -37,8 +37,9 @@ class MTTF_Lead_Admin {
 			return;
 		}
 
-		$ver  = defined( 'MTTF_VERSION' ) ? MTTF_VERSION : '1.0.0';
 		$base = defined( 'MTTF_URL' ) ? MTTF_URL : plugin_dir_url( dirname( __FILE__ ) . '/../minh-thang-transport-flow.php' );
+		$js   = MTTF_PATH . 'assets/js/leads-admin.js';
+		$ver  = file_exists( $js ) ? (string) filemtime( $js ) : ( defined( 'MTTF_VERSION' ) ? MTTF_VERSION : '1.0.0' );
 
 		wp_enqueue_style(
 			'mttf-flatpickr',
@@ -390,8 +391,8 @@ class MTTF_Lead_Admin {
 			$range_display = $format_dmy( $date_to );
 		}
 
-		echo '<label for="mttf-leads-date-range"><span>Khoảng ngày:</span>&nbsp;';
-		echo '<input type="text" id="mttf-leads-date-range" class="regular-text" value="' . esc_attr( $range_display ) . '" placeholder="Chọn khoảng ngày" autocomplete="off" readonly>';
+		echo '<label for="mttf-leads-date-range"><span>Ngày:</span>&nbsp;';
+		echo '<input type="text" id="mttf-leads-date-range" class="regular-text" value="' . esc_attr( $range_display ) . '" placeholder="Hôm nay, hoặc chọn 2 ngày thành khoảng" autocomplete="off" readonly title="Chọn 1 ngày, hoặc chọn tiếp ngày thứ 2 để lấy khoảng. Nút Hôm nay = mặc định ngày hiện tại.">';
 		echo '</label>';
 		echo '<input type="hidden" name="date_from" id="mttf-leads-date-from" value="' . esc_attr( $date_from ) . '">';
 		echo '<input type="hidden" name="date_to" id="mttf-leads-date-to" value="' . esc_attr( $date_to ) . '">';
