@@ -32,6 +32,13 @@
       selectedDates.length > 1 ? toYmd(selectedDates[1]) : toYmd(selectedDates[0]);
   }
 
+  function submitForm() {
+    var form = document.getElementById("mttf-leads-form");
+    if (form) {
+      form.submit();
+    }
+  }
+
   ready(function () {
     var rangeInput = document.getElementById("mttf-leads-date-range");
     var fromInput = document.getElementById("mttf-leads-date-from");
@@ -52,6 +59,30 @@
       }
     }
 
+    // Nếu form chưa có ngày (không nên xảy ra vì PHP default hôm nay) — điền hôm nay.
+    if (!defaults.length) {
+      var t0 = todayYmd();
+      fromInput.value = t0;
+      toInput.value = t0;
+      defaults = [t0, t0];
+    }
+
+    var lastApplied = fromInput.value + "|" + toInput.value;
+    var skipNextCloseSubmit = false;
+
+    function applyKey() {
+      return fromInput.value + "|" + toInput.value;
+    }
+
+    function submitIfChanged() {
+      var key = applyKey();
+      if (key === lastApplied) {
+        return;
+      }
+      lastApplied = key;
+      submitForm();
+    }
+
     var locale =
       window.flatpickr && flatpickr.l10ns && flatpickr.l10ns.vn
         ? flatpickr.l10ns.vn
@@ -68,9 +99,7 @@
       allowInput: false,
       clickOpens: true,
       locale: locale,
-      // Cách 1: lịch mở đúng quanh hôm nay; chọn 1 ngày = lọc ngày đó.
-      // Cách 2: chọn tiếp ngày thứ 2 (hoặc rê chọn khoảng) = khoảng ngày.
-      defaultDate: defaults.length ? defaults : null,
+      defaultDate: defaults,
       onReady: function (selectedDates, dateStr, instance) {
         var wrap = document.createElement("div");
         wrap.className = "mttf-leads-date-shortcuts";
@@ -84,10 +113,12 @@
         btnToday.addEventListener("click", function (e) {
           e.preventDefault();
           var t = todayYmd();
+          skipNextCloseSubmit = true;
           instance.setDate([t, t], true);
           fromInput.value = t;
           toInput.value = t;
           instance.close();
+          submitIfChanged();
         });
 
         var btnClear = document.createElement("button");
@@ -96,9 +127,12 @@
         btnClear.textContent = "Xóa";
         btnClear.addEventListener("click", function (e) {
           e.preventDefault();
+          skipNextCloseSubmit = true;
           instance.clear();
           fromInput.value = "";
           toInput.value = "";
+          instance.close();
+          submitIfChanged();
         });
 
         wrap.appendChild(btnClear);
@@ -114,7 +148,11 @@
         syncHidden(fromInput, toInput, selectedDates);
       },
       onClose: function (selectedDates, dateStr, instance) {
-        // Chọn 1 ngày rồi đóng = mặc định đúng ngày đó (không bắt buộc chọn đủ 2).
+        if (skipNextCloseSubmit) {
+          skipNextCloseSubmit = false;
+          return;
+        }
+        // Chọn 1 ngày rồi đóng = lọc đúng ngày đó (không bắt buộc chọn đủ 2).
         if (selectedDates.length === 1) {
           var one = toYmd(selectedDates[0]);
           fromInput.value = one;
@@ -123,10 +161,10 @@
         } else {
           syncHidden(fromInput, toInput, selectedDates);
         }
+        submitIfChanged();
       },
     });
 
-    // Expose for debugging if needed.
     rangeInput._mttfFlatpickr = fp;
   });
 })();

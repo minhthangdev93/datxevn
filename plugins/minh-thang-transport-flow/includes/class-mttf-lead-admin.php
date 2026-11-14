@@ -126,9 +126,25 @@ class MTTF_Lead_Admin {
 	}
 
 	/**
-	 * @return array{date_from:string,date_to:string} MySQL datetime bounds (empty if unset).
+	 * Effective Y-m-d filters. Defaults both to today when no date params in request.
+	 * Explicit empty date_from/date_to (e.g. after "Xóa") = all dates.
+	 *
+	 * @return array{date_from:string,date_to:string}
 	 */
-	public static function current_date_bounds() {
+	public static function current_date_ymd_pair() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only admin filter.
+		$has_from = array_key_exists( 'date_from', $_REQUEST );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$has_to = array_key_exists( 'date_to', $_REQUEST );
+
+		if ( ! $has_from && ! $has_to ) {
+			$today = wp_date( 'Y-m-d' );
+			return array(
+				'date_from' => $today,
+				'date_to'   => $today,
+			);
+		}
+
 		$from = self::current_date_param( 'date_from' );
 		$to   = self::current_date_param( 'date_to' );
 
@@ -137,6 +153,20 @@ class MTTF_Lead_Admin {
 			$from = $to;
 			$to   = $tmp;
 		}
+
+		return array(
+			'date_from' => $from,
+			'date_to'   => $to,
+		);
+	}
+
+	/**
+	 * @return array{date_from:string,date_to:string} MySQL datetime bounds (empty if unset).
+	 */
+	public static function current_date_bounds() {
+		$pair = self::current_date_ymd_pair();
+		$from = $pair['date_from'];
+		$to   = $pair['date_to'];
 
 		return array(
 			'date_from' => '' !== $from ? $from . ' 00:00:00' : '',
@@ -257,8 +287,9 @@ class MTTF_Lead_Admin {
 		$route_sel  = isset( $_GET['route_id'] ) ? absint( $_GET['route_id'] ) : 0;
 		$phone_q    = isset( $_GET['phone'] ) ? sanitize_text_field( wp_unslash( $_GET['phone'] ) ) : '';
 		$nha_xe_sel = self::current_nha_xe_filter();
-		$date_from  = self::current_date_param( 'date_from' );
-		$date_to    = self::current_date_param( 'date_to' );
+		$ymd_pair   = self::current_date_ymd_pair();
+		$date_from  = $ymd_pair['date_from'];
+		$date_to    = $ymd_pair['date_to'];
 		$dates      = self::current_date_bounds();
 		$operators  = MTTF_Lead_DB::get_nha_xe_operators();
 		$has_dates  = '' !== $dates['date_from'] || '' !== $dates['date_to'];
@@ -392,7 +423,7 @@ class MTTF_Lead_Admin {
 		}
 
 		echo '<label for="mttf-leads-date-range"><span>Ngày:</span>&nbsp;';
-		echo '<input type="text" id="mttf-leads-date-range" class="regular-text" value="' . esc_attr( $range_display ) . '" placeholder="Hôm nay, hoặc chọn 2 ngày thành khoảng" autocomplete="off" readonly title="Chọn 1 ngày, hoặc chọn tiếp ngày thứ 2 để lấy khoảng. Nút Hôm nay = mặc định ngày hiện tại.">';
+		echo '<input type="text" id="mttf-leads-date-range" class="regular-text" value="' . esc_attr( $range_display ) . '" placeholder="Mặc định hôm nay" autocomplete="off" readonly title="Mặc định hôm nay. Chọn 1 ngày hoặc khoảng — tự lọc khi đóng lịch. Nút Xóa = mọi ngày.">';
 		echo '</label>';
 		echo '<input type="hidden" name="date_from" id="mttf-leads-date-from" value="' . esc_attr( $date_from ) . '">';
 		echo '<input type="hidden" name="date_to" id="mttf-leads-date-to" value="' . esc_attr( $date_to ) . '">';
