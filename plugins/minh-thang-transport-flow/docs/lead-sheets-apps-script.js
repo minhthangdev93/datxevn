@@ -2,18 +2,16 @@
  * MTTF Lead → Google Sheets (Customer Match)
  *
  * Setup:
- * 1. Tạo Google Spreadsheet mới, đặt tên vd. "DatXeVN Leads Customer Match".
+ * 1. Tạo Google Spreadsheet mới.
  * 2. Extensions → Apps Script → dán toàn bộ file này → Save.
- * 3. Project Settings → Script Properties → Add:
+ * 3. Project Settings → Script Properties:
  *      API_URL   = https://datxevietnam.vn/wp-json/mttf/v1/leads-export
- *      API_TOKEN = (token từ WP Admin → Tuyến xe → Cài đặt → Lead → Google Sheets)
+ *      API_TOKEN = (token từ WP Admin → Cài đặt MTTF → Lead → Google Sheets)
  * 4. Chạy syncLeads() lần đầu (Authorize).
- * 5. Triggers → Add trigger: syncLeads, Time-driven, Day timer, 6am to 7am
- *    (File → Project settings → Time zone: Asia/Ho_Chi_Minh).
+ * 5. Triggers: syncLeads, Day timer, 6am–7am, timezone Asia/Ho_Chi_Minh.
  *
- * Tabs tạo tự động:
- *  - Leads: log đầy đủ
- *  - CustomerMatch: cột Phone (+84…) dedupe — upload lên Google Ads Audience
+ * Lưu ý getRange(row, column, numRows, numColumns): tham số 3–4 là SỐ HÀNG / SỐ CỘT
+ * (không phải endRow / endColumn).
  */
 
 var LEADS_SHEET = 'Leads';
@@ -54,6 +52,7 @@ function ensureSheet_(name, headers) {
     sh = ss.insertSheet(name);
   }
   if (sh.getLastRow() < 1) {
+    // 1 hàng, N cột
     sh.getRange(1, 1, 1, headers.length).setValues([headers]);
     sh.setFrozenRows(1);
   } else {
@@ -72,17 +71,14 @@ function ensureSheet_(name, headers) {
   return sh;
 }
 
-/**
- * Ghi mảng 2D xuống sheet — số hàng range luôn khớp data.
- */
+/** Ghi mảng 2D: getRange(startRow, 1, numRows, numCols). */
 function writeBlock_(sheet, startRow, values) {
   if (!values || !values.length) {
     return;
   }
   var numRows = values.length;
   var numCols = values[0].length;
-  var endRow = startRow + numRows - 1;
-  sheet.getRange(startRow, 1, endRow, numCols).setValues(values);
+  sheet.getRange(startRow, 1, numRows, numCols).setValues(values);
 }
 
 function loadExistingIds_(sheet) {
@@ -91,7 +87,9 @@ function loadExistingIds_(sheet) {
   if (last < 2) {
     return map;
   }
-  var vals = sheet.getRange(2, 1, last, 1).getValues();
+  // Hàng 2 → last = (last - 1) hàng dữ liệu
+  var numRows = last - 1;
+  var vals = sheet.getRange(2, 1, numRows, 1).getValues();
   for (var i = 0; i < vals.length; i++) {
     var id = String(vals[i][0] || '').trim();
     if (id) {
@@ -101,10 +99,6 @@ function loadExistingIds_(sheet) {
   return map;
 }
 
-/**
- * Incremental sync: since = LAST_SYNC (created_at lower bound).
- * Appends new lead ids; then rebuilds CustomerMatch.
- */
 function syncLeads() {
   var apiUrl = getProp_('API_URL').replace(/\/$/, '');
   var token = getProp_('API_TOKEN');
@@ -167,7 +161,6 @@ function syncLeads() {
   }
 
   if (toAppend.length) {
-    // Không ghi đè hàng header (row 1).
     var startRow = Math.max(sheet.getLastRow() + 1, 2);
     writeBlock_(sheet, startRow, toAppend);
   }
@@ -185,9 +178,6 @@ function syncLeads() {
   );
 }
 
-/**
- * Unique Phone column for Google Ads Customer Match upload.
- */
 function rebuildCustomerMatch() {
   var leads = ensureSheet_(LEADS_SHEET, LEADS_HEADERS);
   var match = ensureSheet_(MATCH_SHEET, ['Phone', 'nha_xe', 'last_created_at']);
@@ -195,7 +185,8 @@ function rebuildCustomerMatch() {
   var phones = {};
 
   if (last >= 2) {
-    var rows = leads.getRange(2, 1, last, LEADS_HEADERS.length).getValues();
+    var numRows = last - 1;
+    var rows = leads.getRange(2, 1, numRows, LEADS_HEADERS.length).getValues();
     for (var i = 0; i < rows.length; i++) {
       var phone = String(rows[i][3] || '').trim();
       if (!phone || phone.indexOf('+') !== 0) {
@@ -223,7 +214,6 @@ function rebuildCustomerMatch() {
   writeBlock_(match, 2, out);
 }
 
-/** One-time: clear LAST_SYNC to re-pull from beginning (still skips existing ids). */
 function resetSyncCursor() {
   PropertiesService.getScriptProperties().deleteProperty('LAST_SYNC');
 }
