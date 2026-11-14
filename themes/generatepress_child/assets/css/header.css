@@ -275,18 +275,25 @@
   text-decoration: none;
   color: #082e4f;
   background: #d9bc4a;
+  border: 0;
   border-radius: 999px;
   min-height: 44px;
   padding: 10px 16px;
+  font-family: inherit;
   font-size: 14px;
   font-weight: 800;
+  line-height: 1.2;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
-.dxvn-header__cta:hover {
+.dxvn-header__cta:hover,
+.dxvn-header__cta:focus-visible {
   background: #caa633;
   color: #082e4f;
 }

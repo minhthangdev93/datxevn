@@ -19,6 +19,8 @@ $booking_button_raw  = function_exists( 'dxvn_get_header_setting' ) ? dxvn_get_h
 $booking_button_url  = function_exists( 'dxvn_resolve_home_cta_url' )
 	? dxvn_resolve_home_cta_url( $booking_button_raw, '#mttf-search-input' )
 	: ( untrailingslashit( home_url( '/' ) ) . '#mttf-search-input' );
+// On nhà xe / tuyến landings: open lead modal in-page instead of leaving for homepage search.
+$booking_opens_lead  = function_exists( 'is_tax' ) && is_tax( array( 'mttf_nha_xe', 'mttf_tuyen' ) );
 ?>
 <header class="dxvn-header" aria-label="<?php esc_attr_e( 'Site header', 'generatepress' ); ?>">
 	<div class="dxvn-header__inner">
@@ -65,9 +67,15 @@ $booking_button_url  = function_exists( 'dxvn_resolve_home_cta_url' )
 					<span class="dxvn-header__hotline-label">Hotline</span>
 					<span class="dxvn-header__hotline-number"><?php echo esc_html( $hotline_display ); ?></span>
 				</a>
-				<a class="dxvn-header__cta" href="<?php echo esc_url( $booking_button_url ); ?>">
-					<?php echo esc_html( $booking_button_text ); ?>
-				</a>
+				<?php if ( $booking_opens_lead ) : ?>
+					<button type="button" class="dxvn-header__cta mttf-landing-trigger-lead">
+						<?php echo esc_html( $booking_button_text ); ?>
+					</button>
+				<?php else : ?>
+					<a class="dxvn-header__cta" href="<?php echo esc_url( $booking_button_url ); ?>">
+						<?php echo esc_html( $booking_button_text ); ?>
+					</a>
+				<?php endif; ?>
 			</div>
 		</div>
 	</div>
