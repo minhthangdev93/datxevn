@@ -16,7 +16,7 @@
 ## Phía Google Sheet
 
 1. Tạo Spreadsheet mới.
-2. **Extensions → Apps Script** → dán nội dung file [`lead-sheets-apps-script.js`](lead-sheets-apps-script.js) → Save.
+2. **Extensions → Apps Script** → dán nội dung file Apps Script (tải từ **WP Admin → Cài đặt MTTF → Lead → nút Apps Script (.js)**, hoặc file `plugins/minh-thang-transport-flow/docs/lead-sheets-apps-script.js`) → Save.
 3. **Project Settings → Script properties**:
    - `API_URL` = `https://datxevietnam.vn/wp-json/mttf/v1/leads-export`
    - `API_TOKEN` = token từ bước WP

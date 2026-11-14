@@ -21,6 +21,7 @@ class MTTF_Settings {
 		add_action( 'admin_init', array( __CLASS__, 'register_settings' ) );
 		add_action( 'admin_init', array( __CLASS__, 'handle_search_stats_actions' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
+		add_action( 'admin_post_mttf_download_sheets_doc', array( __CLASS__, 'download_sheets_doc' ) );
 		add_filter( 'submenu_file', array( __CLASS__, 'ensure_settings_default_tab_in_menu' ), 20, 2 );
 	}
 
@@ -591,7 +592,68 @@ class MTTF_Settings {
 	}
 
 	public static function sheets_export_section_intro() {
-		echo '<p>Sheet tự kéo lead từ WordPress (Apps Script). Dùng tab <code>CustomerMatch</code> để upload danh sách SĐT lên Google Ads Customer Match. Xem <code>docs/lead-sheets-apps-script.js</code> trong repo.</p>';
+		$js_url = self::sheets_doc_download_url( 'lead-sheets-apps-script.js' );
+		$md_url = self::sheets_doc_download_url( 'huong-dan-lead-google-sheets-customer-match.md' );
+		echo '<p>Sheet tự kéo lead từ WordPress (Apps Script). Dùng tab <code>CustomerMatch</code> để upload danh sách SĐT lên Google Ads Customer Match.</p>';
+		echo '<p><strong>Tải file hướng dẫn:</strong> ';
+		printf(
+			'<a class="button button-secondary" href="%s">Apps Script (.js)</a> ',
+			esc_url( $js_url )
+		);
+		printf(
+			'<a class="button button-secondary" href="%s">Hướng dẫn (.md)</a>',
+			esc_url( $md_url )
+		);
+		echo '</p>';
+	}
+
+	/**
+	 * @param string $filename Allowed doc basename.
+	 * @return string
+	 */
+	public static function sheets_doc_download_url( $filename ) {
+		return wp_nonce_url(
+			add_query_arg(
+				array(
+					'action' => 'mttf_download_sheets_doc',
+					'file'   => $filename,
+				),
+				admin_url( 'admin-post.php' )
+			),
+			'mttf_download_sheets_doc'
+		);
+	}
+
+	/**
+	 * Admin-only download for Sheets setup docs bundled in the plugin.
+	 */
+	public static function download_sheets_doc() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Forbidden', 'minh-thang-transport-flow' ), 403 );
+		}
+		check_admin_referer( 'mttf_download_sheets_doc' );
+
+		$allowed = array(
+			'lead-sheets-apps-script.js'                      => 'application/javascript; charset=utf-8',
+			'huong-dan-lead-google-sheets-customer-match.md' => 'text/markdown; charset=utf-8',
+		);
+		$file = isset( $_GET['file'] ) ? sanitize_file_name( wp_unslash( (string) $_GET['file'] ) ) : '';
+		if ( '' === $file || ! isset( $allowed[ $file ] ) ) {
+			wp_die( esc_html__( 'File không hợp lệ.', 'minh-thang-transport-flow' ), 400 );
+		}
+
+		$path = MTTF_PATH . 'docs/' . $file;
+		if ( ! is_readable( $path ) ) {
+			wp_die( esc_html__( 'Không tìm thấy file trên server.', 'minh-thang-transport-flow' ), 404 );
+		}
+
+		nocache_headers();
+		header( 'Content-Type: ' . $allowed[ $file ] );
+		header( 'Content-Disposition: attachment; filename="' . $file . '"' );
+		header( 'Content-Length: ' . (string) filesize( $path ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile -- admin binary download.
+		readfile( $path );
+		exit;
 	}
 
 	public static function render_sheets_export_token() {
