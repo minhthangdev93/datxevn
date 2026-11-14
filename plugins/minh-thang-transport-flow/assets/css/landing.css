@@ -2068,8 +2068,7 @@ body.mttf-landing-page {
 	color: #0f172a;
 }
 
-.mttf-landing-keywords__routes,
-.mttf-landing-keywords__phrases {
+.mttf-landing-keywords__routes {
 	margin-top: 1.25rem;
 }
 
@@ -2090,25 +2089,6 @@ body.mttf-landing-page {
 	font-size: 0.95rem;
 	font-weight: 600;
 	color: #0f172a;
-}
-
-.mttf-landing-keywords__chips {
-	list-style: none;
-	margin: 0;
-	padding: 0;
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.45rem;
-}
-
-.mttf-landing-keywords__chips li {
-	padding: 0.4rem 0.75rem;
-	border-radius: 10px;
-	background: rgba(14, 165, 233, 0.08);
-	border: 1px solid rgba(14, 165, 233, 0.18);
-	color: #0369a1;
-	font-size: 0.92rem;
-	font-weight: 600;
 }
 
 .mttf-landing-keywords__cta-note {

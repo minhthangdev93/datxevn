@@ -15,7 +15,10 @@ $default_hotline    = '0900 000 000';
 $hotline_display    = function_exists( 'dxvn_get_header_setting' ) ? dxvn_get_header_setting( 'hotline_number', $default_hotline ) : $default_hotline;
 $hotline_href       = preg_replace( '/[^0-9+]/', '', $hotline_display );
 $booking_button_text = function_exists( 'dxvn_get_header_setting' ) ? dxvn_get_header_setting( 'booking_button_text', 'Đặt vé ngay' ) : 'Đặt vé ngay';
-$booking_button_url  = function_exists( 'dxvn_get_header_setting' ) ? dxvn_get_header_setting( 'booking_button_url', home_url( '/#mttf-hub' ) ) : home_url( '/#mttf-hub' );
+$booking_button_raw  = function_exists( 'dxvn_get_header_setting' ) ? dxvn_get_header_setting( 'booking_button_url', '#mttf-search-input' ) : '#mttf-search-input';
+$booking_button_url  = function_exists( 'dxvn_resolve_home_cta_url' )
+	? dxvn_resolve_home_cta_url( $booking_button_raw, '#mttf-search-input' )
+	: ( untrailingslashit( home_url( '/' ) ) . '#mttf-search-input' );
 ?>
 <header class="dxvn-header" aria-label="<?php esc_attr_e( 'Site header', 'generatepress' ); ?>">
 	<div class="dxvn-header__inner">

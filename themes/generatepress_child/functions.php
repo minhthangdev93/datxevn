@@ -408,6 +408,9 @@ function dxvn_sanitize_header_settings( $input ) {
 			$raw_url = trim( (string) $input[ $key ] );
 			if ( '' === $raw_url || '#' === $raw_url ) {
 				$sanitized[ $key ] = '#';
+			} elseif ( isset( $raw_url[0] ) && '#' === $raw_url[0] ) {
+				// Keep in-page hashes (resolved to homepage at render time).
+				$sanitized[ $key ] = sanitize_text_field( $raw_url );
 			} else {
 				$sanitized[ $key ] = esc_url_raw( $raw_url );
 			}
@@ -435,6 +438,26 @@ function dxvn_get_header_setting( $key, $default = '' ) {
 	$value   = $options[ $key ] ?? '';
 
 	return '' !== $value ? $value : $default;
+}
+
+/**
+ * Resolve in-page hash CTAs to the homepage so they work on landing pages.
+ *
+ * @param string $url           Raw URL from settings (may be "#mttf-search-input").
+ * @param string $fallback_hash Fallback hash with leading #.
+ * @return string Absolute homepage URL with hash, or the original absolute URL.
+ */
+function dxvn_resolve_home_cta_url( $url, $fallback_hash = '#mttf-search-input' ) {
+	$url = trim( (string) $url );
+	if ( '' === $url || '#' === $url ) {
+		$url = $fallback_hash;
+	}
+
+	if ( isset( $url[0] ) && '#' === $url[0] ) {
+		return untrailingslashit( home_url( '/' ) ) . $url;
+	}
+
+	return $url;
 }
 
 function dxvn_get_header_settings() {

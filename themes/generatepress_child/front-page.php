@@ -154,7 +154,7 @@ get_header();
 				<p class="dxvn-home-section__desc"><?php echo esc_html( dxvn_get_header_setting( 'home_final_cta_desc' ) ); ?></p>
 				<div class="dxvn-final-cta__actions">
 					<a class="dxvn-final-cta__btn dxvn-final-cta__btn--primary" href="<?php echo esc_url( 'tel:' . preg_replace( '/[^0-9\+]/', '', (string) dxvn_get_header_setting( 'home_final_cta_primary_phone', '19008164' ) ) ); ?>"><?php echo esc_html( dxvn_get_header_setting( 'home_final_cta_primary_text' ) ); ?></a>
-					<a class="dxvn-final-cta__btn dxvn-final-cta__btn--secondary" href="<?php echo esc_url( dxvn_get_header_setting( 'home_final_cta_secondary_url', home_url( '/#mttf-search-input' ) ) ); ?>"><?php echo esc_html( dxvn_get_header_setting( 'home_final_cta_secondary_text' ) ); ?></a>
+					<a class="dxvn-final-cta__btn dxvn-final-cta__btn--secondary" href="<?php echo esc_url( dxvn_resolve_home_cta_url( dxvn_get_header_setting( 'home_final_cta_secondary_url', '#mttf-search-input' ) ) ); ?>"><?php echo esc_html( dxvn_get_header_setting( 'home_final_cta_secondary_text' ) ); ?></a>
 				</div>
 			</div>
 		</section>
