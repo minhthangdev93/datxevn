@@ -184,14 +184,16 @@ function syncLeads() {
 }
 
 /**
- * Ghi lại 1 tab Customer Match (cột Phone trước — Ads map dễ).
+ * Ghi lại 1 tab Customer Match.
+ * Có cả phone_e164 + Phone — Ads Data Manager hay map vào phone_e164.
  * @param {string} sheetName
- * @param {Array<Array>} rows [[Phone, nha_xe, last_created_at], ...]
+ * @param {Array<Array>} rows [[phone_e164, Phone, nha_xe, last_created_at], ...]
  */
 function writeMatchSheet_(sheetName, rows) {
-  var sh = ensureSheet_(sheetName, ['Phone', 'nha_xe', 'last_created_at']);
+  var headers = ['phone_e164', 'Phone', 'nha_xe', 'last_created_at'];
+  var sh = ensureSheet_(sheetName, headers);
   sh.clearContents();
-  sh.getRange(1, 1, 1, 3).setValues([['Phone', 'nha_xe', 'last_created_at']]);
+  sh.getRange(1, 1, 1, headers.length).setValues([headers]);
   sh.setFrozenRows(1);
   writeBlock_(sh, 2, rows);
 }
@@ -224,7 +226,8 @@ function rebuildCustomerMatch() {
   keys.sort();
   for (var k = 0; k < keys.length; k++) {
     var p = keys[k];
-    var row = [p, phones[p].nha, phones[p].created];
+    // phone_e164 + Phone cùng giá trị (Ads đang tìm phone_e164).
+    var row = [p, p, phones[p].nha, phones[p].created];
     outAll.push(row);
     if (phones[p].nha === SLUG_HK) {
       outHk.push(row);
