@@ -40,21 +40,31 @@
   font-size: 20px;
 }
 
-.dxvn-header__mobile-lang {
-  display: none;
+.dxvn-header__brand {
+  order: 1;
 }
 
-.dxvn-header__desktop-lang {
+.dxvn-header__menu-wrap {
+  order: 2;
+}
+
+.dxvn-header__lang {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  order: 3;
+  margin-left: 8px;
   min-height: 44px;
-  padding: 0 25px;
+  padding: 0 18px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.08);
 }
 
-.dxvn-header__desktop-lang a.gt_switcher-popup {
+.dxvn-header__toggle {
+  order: 4;
+}
+
+.dxvn-header__lang a.gt_switcher-popup {
   display: inline-flex !important;
   flex-direction: row !important;
   align-items: center !important;
@@ -66,14 +76,14 @@
   line-height: 1 !important;
 }
 
-.dxvn-header__desktop-lang a.gt_switcher-popup > * {
+.dxvn-header__lang a.gt_switcher-popup > * {
   display: inline-flex !important;
   align-items: center !important;
   white-space: nowrap !important;
 }
 
-.dxvn-header__desktop-lang a.gt_switcher-popup span,
-.dxvn-header__desktop-lang .gt_switcher-popup span {
+.dxvn-header__lang a.gt_switcher-popup span,
+.dxvn-header__lang .gt_switcher-popup span {
   color: #ffffff !important;
   font-size: 13px !important;
   font-weight: 600 !important;
@@ -86,7 +96,7 @@
 }
 
 .dxvn-header__toggle {
-  margin-left: auto;
+  margin-left: 8px;
   width: 44px;
   height: 44px;
   border: 0;
@@ -316,31 +326,25 @@
 
   .dxvn-header__toggle {
     display: inline-flex;
+    order: 3;
+    margin-left: 8px;
   }
 
-  .dxvn-header__mobile-lang {
-    display: inline-flex;
+  .dxvn-header__lang {
+    order: 2;
     margin-left: auto;
-    align-items: center;
+    padding: 0 8px;
+    background: transparent;
   }
 
-  .dxvn-header__desktop-lang {
-    display: none;
-  }
-
-  .dxvn-header__mobile-lang > * {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .dxvn-header__mobile-lang a.gt_switcher-popup span {
+  .dxvn-header__lang a.gt_switcher-popup span {
     color: #ffffff !important;
     font-size: 13px !important;
     padding: 0 !important;
   }
 
   .dxvn-header__menu-wrap {
+    order: 4;
     position: absolute;
     top: 100%;
     left: 0;

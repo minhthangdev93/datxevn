@@ -560,9 +560,10 @@ class MTTF_Shortcode {
 		$zalo_link      = (string) get_post_meta( $post_id, '_mttf_zalo_link', true );
 		$region         = (string) get_post_meta( $post_id, '_mttf_hub_region', true );
 		$thumb_id       = (int) get_post_thumbnail_id( $post_id );
+		$thumb_size     = $thumb_id > 0 ? self::resolve_card_image_size( $thumb_id ) : 'medium';
 		$image_url      = $thumb_id > 0
-			? (string) wp_get_attachment_image_url( $thumb_id, 'mttf-card' )
-			: (string) get_the_post_thumbnail_url( $post_id, 'mttf-card' );
+			? (string) wp_get_attachment_image_url( $thumb_id, $thumb_size )
+			: (string) get_the_post_thumbnail_url( $post_id, 'medium' );
 		$gallery_ids    = self::parse_gallery_ids( (string) get_post_meta( $post_id, '_mttf_gallery_ids', true ) );
 		$slide_interval = max( 1, (int) get_post_meta( $post_id, '_mttf_slider_interval', true ) );
 		$slide_attachments = array();
@@ -577,7 +578,8 @@ class MTTF_Shortcode {
 				$slide_attachments[] = (int) $gallery_id;
 			}
 		}
-		$slide_attachments = array_values( array_unique( $slide_attachments ) );
+		// Cap slides to keep homepage/mobile HTML and bandwidth light.
+		$slide_attachments = array_slice( array_values( array_unique( $slide_attachments ) ), 0, 2 );
 
 		if ( $search_count >= 3 && ! in_array( 'tuyen_hot', $hot_badges, true ) ) {
 			array_unshift( $hot_badges, 'tuyen_hot' );
@@ -606,12 +608,13 @@ class MTTF_Shortcode {
 							'alt'      => $route->post_title,
 							'loading'  => ( $eager_image && $is_first_slide ) ? 'eager' : 'lazy',
 							'decoding' => 'async',
-							'sizes'    => '(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 33vw',
+							'sizes'    => '(max-width: 767px) 92vw, (max-width: 1023px) 46vw, 360px',
 						);
 						if ( $eager_image && $is_first_slide ) {
 							$img_attrs['fetchpriority'] = 'high';
 						}
-						echo wp_get_attachment_image( (int) $attachment_id, 'mttf-card', false, $img_attrs ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+						$card_size = self::resolve_card_image_size( (int) $attachment_id );
+						echo wp_get_attachment_image( (int) $attachment_id, $card_size, false, $img_attrs ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 					endforeach;
 					?>
 				</div>
@@ -909,5 +912,34 @@ class MTTF_Shortcode {
 		$parts = array_filter( $parts, 'strlen' );
 		$parts = array_map( 'absint', $parts );
 		return array_values( array_filter( $parts ) );
+	}
+
+	/**
+	 * Prefer a real intermediate file over full-size fallback (critical on mobile).
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 * @return string Image size name.
+	 */
+	private static function resolve_card_image_size( $attachment_id ) {
+		$attachment_id = absint( $attachment_id );
+		if ( $attachment_id < 1 ) {
+			return 'medium';
+		}
+
+		foreach ( array( 'mttf-card', 'medium_large', 'large', 'medium' ) as $size ) {
+			$src = wp_get_attachment_image_src( $attachment_id, $size );
+			if ( ! is_array( $src ) || empty( $src[0] ) ) {
+				continue;
+			}
+			// [3] true = dedicated resized file exists.
+			if ( ! empty( $src[3] ) ) {
+				return $size;
+			}
+			if ( ! empty( $src[1] ) && (int) $src[1] <= 800 ) {
+				return $size;
+			}
+		}
+
+		return 'medium';
 	}
 }

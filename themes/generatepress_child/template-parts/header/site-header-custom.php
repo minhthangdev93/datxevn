@@ -34,8 +34,8 @@ $booking_opens_lead  = function_exists( 'is_tax' ) && is_tax( array( 'mttf_nha_x
 			<?php endif; ?>
 		</div>
 
-		<div class="dxvn-header__mobile-lang" aria-label="Language switcher">
-			<?php echo do_shortcode( '[gtranslate]' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+		<div class="dxvn-header__lang" aria-label="Language switcher">
+			<?php echo do_shortcode( '[gtranslate]' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped — render once to avoid duplicate JS ?>
 		</div>
 
 		<button class="dxvn-header__toggle" type="button" aria-expanded="false" aria-controls="<?php echo esc_attr( $menu_id ); ?>">
@@ -60,9 +60,6 @@ $booking_opens_lead  = function_exists( 'is_tax' ) && is_tax( array( 'mttf_nha_x
 			</nav>
 
 			<div class="dxvn-header__actions">
-				<div class="dxvn-header__desktop-lang" aria-label="Language switcher">
-					<?php echo do_shortcode( '[gtranslate]' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-				</div>
 				<a class="dxvn-header__hotline" href="tel:<?php echo esc_attr( $hotline_href ); ?>">
 					<span class="dxvn-header__hotline-label">Hotline</span>
 					<span class="dxvn-header__hotline-number"><?php echo esc_html( $hotline_display ); ?></span>

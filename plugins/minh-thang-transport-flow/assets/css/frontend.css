@@ -28,7 +28,8 @@
   justify-content: center;
   margin: 0 0 16px;
   border-radius: 20px;
-  overflow: hidden;
+  /* visible so search suggestions can extend below the hero */
+  overflow: visible;
   background-color: #0a2540;
   background-image: url("https://images.pexels.com/photos/120049/pexels-photo-120049.jpeg");
   background-size: cover;
@@ -42,6 +43,7 @@
   content: "";
   position: absolute;
   inset: 0;
+  border-radius: inherit;
   background: linear-gradient(
     180deg,
     rgba(0, 31, 56, 0.72) 0%,
@@ -55,6 +57,7 @@
   content: "";
   position: absolute;
   inset: 0;
+  border-radius: inherit;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   pointer-events: none;
 }
@@ -107,7 +110,7 @@
   width: 100%;
   max-width: 640px;
   margin: 0 auto;
-  z-index: 20;
+  z-index: 40;
 }
 
 .mttf-search--hero {
@@ -350,11 +353,14 @@
   right: 0;
   top: calc(100% + 4px);
   z-index: 200;
+  max-height: min(320px, 50vh);
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .mttf-suggest__list {
