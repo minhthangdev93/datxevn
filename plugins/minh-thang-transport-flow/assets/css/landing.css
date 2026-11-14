@@ -2051,3 +2051,69 @@ body.mttf-landing-page {
 		transform: none;
 	}
 }
+
+/* Ads keyword coverage — nha-xe landing */
+.mttf-landing-keywords .mttf-landing-section__lead {
+	margin: 0.65rem 0 0;
+	max-width: 52rem;
+	font-size: 1.05rem;
+	line-height: 1.65;
+	color: rgba(15, 23, 42, 0.78);
+}
+
+.mttf-landing-keywords__subtitle {
+	margin: 0 0 0.75rem;
+	font-size: 1.05rem;
+	font-weight: 700;
+	color: #0f172a;
+}
+
+.mttf-landing-keywords__routes,
+.mttf-landing-keywords__phrases {
+	margin-top: 1.25rem;
+}
+
+.mttf-landing-keywords__route-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.mttf-landing-keywords__route-list li {
+	padding: 0.45rem 0.8rem;
+	border-radius: 999px;
+	background: #f1f5f9;
+	border: 1px solid rgba(15, 23, 42, 0.06);
+	font-size: 0.95rem;
+	font-weight: 600;
+	color: #0f172a;
+}
+
+.mttf-landing-keywords__chips {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.45rem;
+}
+
+.mttf-landing-keywords__chips li {
+	padding: 0.4rem 0.75rem;
+	border-radius: 10px;
+	background: rgba(14, 165, 233, 0.08);
+	border: 1px solid rgba(14, 165, 233, 0.18);
+	color: #0369a1;
+	font-size: 0.92rem;
+	font-weight: 600;
+}
+
+.mttf-landing-keywords__cta-note {
+	margin: 1.25rem 0 0;
+	font-size: 0.98rem;
+	line-height: 1.5;
+	color: rgba(15, 23, 42, 0.72);
+}

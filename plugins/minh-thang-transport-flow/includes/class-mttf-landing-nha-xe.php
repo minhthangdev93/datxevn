@@ -86,6 +86,7 @@ class MTTF_Landing_Nha_Xe {
 		>
 			<?php self::render_hero( $term, $stats, $tuyen_cnt, $card_cnt, $routes ); ?>
 			<?php self::render_routes( $term, $groups, $routes ); ?>
+			<?php self::render_keyword_coverage( $term, $groups ); ?>
 			<?php self::render_benefits( $term ); ?>
 			<?php self::render_personas( $term ); ?>
 			<?php self::render_steps( $term ); ?>
@@ -107,6 +108,87 @@ class MTTF_Landing_Nha_Xe {
 		}
 
 		return trim( (string) $term->name );
+	}
+
+	/**
+	 * Ads / Quality Score content profiles for priority operators.
+	 *
+	 * @param WP_Term $term Term.
+	 * @return array<string,mixed>|null
+	 */
+	private static function get_ads_profile( $term ) {
+		if ( ! $term instanceof WP_Term ) {
+			return null;
+		}
+
+		$slug = (string) $term->slug;
+		$map  = array(
+			'hk-buslines'   => array(
+				'overview'   => 'Xe Hk Buslines (còn gọi là nhà xe Hk Busline / Hk Buslines VN) chuyên cabin VIP tuyến Hà Nội đi Sapa, Huế, Đà Nẵng, Hội An, Phong Nha và các tuyến liên tỉnh. Trang này giúp bạn xem giá tham khảo, chọn chuyến và để lại số để được tư vấn đặt vé nhanh.',
+				'title'      => 'Đặt vé xe Hk Buslines',
+				'lead'       => 'Nhiều khách tìm kiếm xe Hk Buslines, nhà xe Hk Busline, Hk Buslines VN hoặc Hk Bus Lines Vietnam khi cần cabin riêng tư, đón trả linh hoạt. Dưới đây là các tuyến đang được tổng hợp để bạn so sánh trước khi đặt.',
+				'phrases'    => array(
+					'xe hk buslines',
+					'xe hk busline',
+					'nhà xe hk busline',
+					'hk buslines',
+					'hk busline',
+					'hk bus lines vietnam',
+					'hkbuslines vn',
+					'hk line bus',
+					'hkbuslines',
+					'hkbus',
+				),
+				'faq'        => array(
+					array(
+						'q' => 'Xe Hk Buslines và nhà xe Hk Busline có phải cùng một nhà xe không?',
+						'a' => 'Có. Xe Hk Buslines / Hk Busline / Hkbuslines đều chỉ cùng nhà xe Hk Buslines trên trang này. Bạn có thể xem tuyến, giá tham khảo và bấm tư vấn để đặt.',
+					),
+					array(
+						'q' => 'Hk Buslines VN hoặc Hk Bus Lines Vietnam đặt vé ở đâu?',
+						'a' => 'Tại Đặt Xe Việt Nam: chọn tuyến Hk Buslines bên trên, bấm «Tư vấn ngay» hoặc Zalo — nhân viên xác nhận giờ chạy, điểm đón/trả và giữ chỗ giúp bạn.',
+					),
+					array(
+						'q' => 'Hk line bus / Hkbuslines có cabin VIP không?',
+						'a' => 'Hk Buslines khai thác Cabin VIP 24 Phòng trên nhiều tuyến. Xem loại xe và giá «từ» trên từng card tuyến để chọn chuyến phù hợp.',
+					),
+				),
+			),
+			'g8-open-tour' => array(
+				'overview'   => 'Xe G8 Open Tour (thường tìm theo nhà xe G8 Sapa, G8 Open Tour Sapa) chạy cabin VIP các tuyến Hà Nội ⇌ Sapa, Hà Giang, Huế, Hội An, Đà Nẵng, Phong Nha… Trang này gom tuyến đang khai thác để so sánh giá và nhận tư vấn đặt vé.',
+				'title'      => 'Đặt vé xe G8 Open Tour – Nhà xe G8 Sapa',
+				'lead'       => 'Khách thường tìm xe G8 Open Tour, nhà xe G8 Sapa, G8 Open Tour Sapa hoặc G8 bus Sapa khi cần cabin VIP đi Sapa và các tuyến miền Trung – Tây Bắc. Chọn tuyến bên trên hoặc xem nhanh các nhu cầu phổ biến dưới đây.',
+				'phrases'    => array(
+					'xe g8 open tour',
+					'nhà xe g8 sapa',
+					'xe g8 sapa',
+					'g8 sapa',
+					'g8 open tour sapa',
+					'xe sapa g8',
+					'g8 open tour',
+					'sapa open tour g8',
+					'g8 bus sapa',
+					'g8 sapa open tour',
+					'xe g8 sapa open tour',
+				),
+				'faq'        => array(
+					array(
+						'q' => 'Nhà xe G8 Sapa và G8 Open Tour có phải một nhà xe không?',
+						'a' => 'Có. Nhà xe G8 Sapa / xe G8 Open Tour / G8 Open Tour Sapa đều trỏ về G8 Open Tour. Trang này tổng hợp các tuyến đang khai thác để bạn đặt qua Đặt Xe Việt Nam.',
+					),
+					array(
+						'q' => 'G8 bus Sapa hoặc Sapa Open Tour G8 chạy những khung giờ nào?',
+						'a' => 'Giờ chạy hiển thị trên từng card tuyến (ví dụ Hà Nội ⇌ Sapa). Bấm tư vấn để được xác nhận chuyến, điểm đón/trả và tình trạng chỗ của G8 Open Tour.',
+					),
+					array(
+						'q' => 'Đặt xe G8 Sapa Open Tour khác gì đặt trực tiếp?',
+						'a' => 'Bạn xem giá tham khảo và loại xe trên card, rồi để lại số điện thoại. Nhân viên Đặt Xe Việt Nam gọi lại để giữ chỗ với G8 Open Tour theo nhu cầu của bạn.',
+					),
+				),
+			),
+		);
+
+		return isset( $map[ $slug ] ) ? $map[ $slug ] : null;
 	}
 
 	/**
@@ -280,7 +362,14 @@ class MTTF_Landing_Nha_Xe {
 							</div>
 							<h2 class="mttf-landing-hero__overview-title"><?php echo esc_html( 'Nhà xe ' . $name ); ?></h2>
 							<p class="mttf-landing-hero__overview-desc">
-								<?php esc_html_e( 'Đang được tổng hợp tại Đặt Xe Việt Nam với các tuyến và lựa chọn xe đang khai thác.', 'minh-thang-transport-flow' ); ?>
+								<?php
+								$ads_profile = self::get_ads_profile( $term );
+								if ( is_array( $ads_profile ) && ! empty( $ads_profile['overview'] ) ) {
+									echo esc_html( (string) $ads_profile['overview'] );
+								} else {
+									esc_html_e( 'Đang được tổng hợp tại Đặt Xe Việt Nam với các tuyến và lựa chọn xe đang khai thác.', 'minh-thang-transport-flow' );
+								}
+								?>
 							</p>
 							<dl class="mttf-landing-hero__overview-stats">
 								<div class="mttf-landing-hero__overview-stat">
@@ -376,6 +465,67 @@ class MTTF_Landing_Nha_Xe {
 					</p>
 				</div>
 			<?php endif; ?>
+		</section>
+		<?php
+	}
+
+	/**
+	 * Keyword-intent coverage block for Ads Quality Score (selected operators).
+	 *
+	 * @param WP_Term                                          $term   Term.
+	 * @param array<int,array{term:WP_Term,routes:WP_Post[]}> $groups Route groups.
+	 */
+	private static function render_keyword_coverage( $term, array $groups ) {
+		$profile = self::get_ads_profile( $term );
+		if ( ! is_array( $profile ) ) {
+			return;
+		}
+
+		$route_labels = array();
+		foreach ( $groups as $group ) {
+			if ( empty( $group['term'] ) || ! $group['term'] instanceof WP_Term ) {
+				continue;
+			}
+			$route_labels[] = trim( (string) $group['term']->name );
+		}
+		$route_labels = array_values( array_unique( array_filter( $route_labels ) ) );
+		$phrases      = ! empty( $profile['phrases'] ) && is_array( $profile['phrases'] ) ? $profile['phrases'] : array();
+		?>
+		<section class="mttf-landing-section mttf-landing-keywords" aria-labelledby="mttf-landing-nx-keywords-title">
+			<div class="mttf-landing-section__head">
+				<h2 id="mttf-landing-nx-keywords-title" class="mttf-landing-section__title">
+					<?php echo esc_html( (string) ( $profile['title'] ?? 'Đặt vé nhà xe này' ) ); ?>
+				</h2>
+				<?php if ( ! empty( $profile['lead'] ) ) : ?>
+					<p class="mttf-landing-section__lead"><?php echo esc_html( (string) $profile['lead'] ); ?></p>
+				<?php endif; ?>
+			</div>
+
+			<?php if ( ! empty( $route_labels ) ) : ?>
+				<div class="mttf-landing-keywords__routes">
+					<h3 class="mttf-landing-keywords__subtitle"><?php esc_html_e( 'Tuyến đang được tìm nhiều', 'minh-thang-transport-flow' ); ?></h3>
+					<ul class="mttf-landing-keywords__route-list" role="list">
+						<?php foreach ( $route_labels as $label ) : ?>
+							<li><?php echo esc_html( $label ); ?></li>
+						<?php endforeach; ?>
+					</ul>
+				</div>
+			<?php endif; ?>
+
+			<?php if ( ! empty( $phrases ) ) : ?>
+				<div class="mttf-landing-keywords__phrases">
+					<h3 class="mttf-landing-keywords__subtitle"><?php esc_html_e( 'Khách thường tìm theo', 'minh-thang-transport-flow' ); ?></h3>
+					<ul class="mttf-landing-keywords__chips" role="list">
+						<?php foreach ( $phrases as $phrase ) : ?>
+							<li><?php echo esc_html( (string) $phrase ); ?></li>
+						<?php endforeach; ?>
+					</ul>
+				</div>
+			<?php endif; ?>
+
+			<p class="mttf-landing-keywords__cta-note">
+				<?php esc_html_e( 'Chọn card tuyến bên trên rồi bấm «Tư vấn ngay» để được gọi lại trong vài phút.', 'minh-thang-transport-flow' ); ?>
+			</p>
 		</section>
 		<?php
 	}
@@ -561,12 +711,45 @@ class MTTF_Landing_Nha_Xe {
 					}
 				}
 				if ( ! empty( $items ) ) {
-					return self::apply_operator_tokens_to_faq_items( $items, $operator_name );
+					$items = self::apply_operator_tokens_to_faq_items( $items, $operator_name );
+					return self::merge_ads_faq_items( $term, $items );
 				}
 			}
 		}
 
-		return self::get_default_faq_items( $operator_name );
+		return self::merge_ads_faq_items( $term, self::get_default_faq_items( $operator_name ) );
+	}
+
+	/**
+	 * Prepend operator-specific Ads FAQ rows when available.
+	 *
+	 * @param WP_Term                             $term  Term.
+	 * @param array<int,array{q:string,a:string}> $items FAQ rows.
+	 * @return array<int,array{q:string,a:string}>
+	 */
+	private static function merge_ads_faq_items( $term, array $items ) {
+		$profile = self::get_ads_profile( $term );
+		if ( ! is_array( $profile ) || empty( $profile['faq'] ) || ! is_array( $profile['faq'] ) ) {
+			return $items;
+		}
+
+		$extra = array();
+		foreach ( $profile['faq'] as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+			$q = trim( (string) ( $row['q'] ?? '' ) );
+			$a = trim( (string) ( $row['a'] ?? '' ) );
+			if ( '' !== $q && '' !== $a ) {
+				$extra[] = array( 'q' => $q, 'a' => $a );
+			}
+		}
+
+		if ( empty( $extra ) ) {
+			return $items;
+		}
+
+		return array_merge( $extra, $items );
 	}
 
 	/**
