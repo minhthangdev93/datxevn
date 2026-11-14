@@ -169,10 +169,22 @@ class MTTF_Lead_Notify {
 	}
 
 	/**
-	 * @param array<string,mixed> $context Context.
+	 * Send arbitrary Telegram text to the default (or given) chat.
+	 *
+	 * @param string $text    Message body.
+	 * @param string $chat_id Optional chat id override.
 	 * @return array{success:bool,skipped:bool,error:string}
 	 */
-	private static function send_telegram( array $context ) {
+	public static function send_telegram_text( $text, $chat_id = '' ) {
+		$text = trim( (string) $text );
+		if ( '' === $text ) {
+			return array(
+				'success' => false,
+				'skipped' => true,
+				'error'   => '',
+			);
+		}
+
 		$default_token = MTTF_Settings::get( 'telegram_bot_token', '' );
 		$token         = trim( (string) apply_filters( 'mttf_telegram_bot_token', $default_token ) );
 		if ( '' === $token ) {
@@ -183,7 +195,10 @@ class MTTF_Lead_Notify {
 			);
 		}
 
-		$chat_id = self::resolve_telegram_chat_id( (int) $context['route_id'], (string) $context['region'] );
+		$chat_id = trim( (string) $chat_id );
+		if ( '' === $chat_id ) {
+			$chat_id = self::resolve_telegram_chat_id( 0, '' );
+		}
 		if ( '' === $chat_id ) {
 			return array(
 				'success' => false,
@@ -191,8 +206,6 @@ class MTTF_Lead_Notify {
 				'error'   => '',
 			);
 		}
-
-		$text = self::build_telegram_message_body( $context );
 
 		$response = wp_remote_post(
 			'https://api.telegram.org/bot' . $token . '/sendMessage',
@@ -233,6 +246,17 @@ class MTTF_Lead_Notify {
 			'skipped' => false,
 			'error'   => '',
 		);
+	}
+
+	/**
+	 * @param array<string,mixed> $context Context.
+	 * @return array{success:bool,skipped:bool,error:string}
+	 */
+	private static function send_telegram( array $context ) {
+		$text = self::build_telegram_message_body( $context );
+		$chat = self::resolve_telegram_chat_id( (int) $context['route_id'], (string) $context['region'] );
+
+		return self::send_telegram_text( $text, $chat );
 	}
 
 	/**

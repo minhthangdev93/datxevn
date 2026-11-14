@@ -50,6 +50,8 @@ require_once MTTF_PATH . 'includes/class-mttf-ajax.php';
 
 require_once MTTF_PATH . 'includes/class-mttf-lead-notify.php';
 
+require_once MTTF_PATH . 'includes/class-mttf-lead-daily-digest.php';
+
 require_once MTTF_PATH . 'includes/class-mttf-activity-pings.php';
 
 require_once MTTF_PATH . 'includes/class-mttf-contact-counter.php';
@@ -86,11 +88,19 @@ register_activation_hook(
 
 		MTTF_Landing_Taxonomies::activate();
 
+		MTTF_Lead_Daily_Digest::activate();
+
 	}
 
 );
 
-register_deactivation_hook( __FILE__, array( 'MTTF_Contact_Counter', 'deactivate' ) );
+register_deactivation_hook(
+	__FILE__,
+	static function () {
+		MTTF_Contact_Counter::deactivate();
+		MTTF_Lead_Daily_Digest::deactivate();
+	}
+);
 
 
 
@@ -115,6 +125,8 @@ add_action(
 		MTTF_Lead_Admin::init();
 
 		MTTF_Ajax::init();
+
+		MTTF_Lead_Daily_Digest::init();
 
 		MTTF_Activity_Pings::init();
 

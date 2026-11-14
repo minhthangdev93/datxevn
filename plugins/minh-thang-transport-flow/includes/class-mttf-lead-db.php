@@ -228,6 +228,75 @@ class MTTF_Lead_DB {
 	}
 
 	/**
+	 * Daily Ads LP summary: leads whose source_url is the nhà xe landing.
+	 *
+	 * @param string $slug    Operator slug (hk-buslines, g8-open-tour).
+	 * @param string $day_ymd Local day Y-m-d.
+	 * @return array{total:int,routes:array<int,array{title:string,count:int}>}
+	 */
+	public static function summarize_landing_day( $slug, $day_ymd ) {
+		global $wpdb;
+
+		$empty = array(
+			'total'  => 0,
+			'routes' => array(),
+		);
+
+		$slug = sanitize_title( (string) $slug );
+		$day  = preg_replace( '/[^0-9\-]/', '', (string) $day_ymd );
+		if ( '' === $slug || ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $day ) || ! self::table_exists() ) {
+			return $empty;
+		}
+
+		$table     = self::table_name();
+		$path_like = '%' . $wpdb->esc_like( '/nha-xe/' . $slug ) . '%';
+		$date_from = $day . ' 00:00:00';
+		$date_to   = $day . ' 23:59:59';
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name from prefix.
+		$sql = $wpdb->prepare(
+			"SELECT route_title, COUNT(*) AS cnt
+			FROM {$table}
+			WHERE source_url LIKE %s
+				AND created_at >= %s
+				AND created_at <= %s
+			GROUP BY route_title
+			ORDER BY cnt DESC, route_title ASC",
+			$path_like,
+			$date_from,
+			$date_to
+		);
+
+		$rows = $wpdb->get_results( $sql, OBJECT ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		if ( ! is_array( $rows ) || empty( $rows ) ) {
+			return $empty;
+		}
+
+		$total  = 0;
+		$routes = array();
+		foreach ( $rows as $row ) {
+			$count = isset( $row->cnt ) ? (int) $row->cnt : 0;
+			if ( $count < 1 ) {
+				continue;
+			}
+			$title = isset( $row->route_title ) ? trim( (string) $row->route_title ) : '';
+			if ( '' === $title ) {
+				$title = 'Không gắn tuyến';
+			}
+			$routes[] = array(
+				'title' => $title,
+				'count' => $count,
+			);
+			$total += $count;
+		}
+
+		return array(
+			'total'  => $total,
+			'routes' => $routes,
+		);
+	}
+
+	/**
 	 * @param string $path_fragment e.g. /nha-xe/hk-buslines or slug hk-buslines
 	 * @return int
 	 */
@@ -419,6 +488,18 @@ class MTTF_Lead_DB {
 				}
 				$where[] = '(' . implode( ' OR ', $or_parts ) . ')';
 			}
+		}
+
+		$date_from = isset( $args['date_from'] ) ? trim( (string) $args['date_from'] ) : '';
+		if ( '' !== $date_from ) {
+			$where[]  = 'created_at >= %s';
+			$params[] = $date_from;
+		}
+
+		$date_to = isset( $args['date_to'] ) ? trim( (string) $args['date_to'] ) : '';
+		if ( '' !== $date_to ) {
+			$where[]  = 'created_at <= %s';
+			$params[] = $date_to;
 		}
 
 		$where_sql = implode( ' AND ', $where );
