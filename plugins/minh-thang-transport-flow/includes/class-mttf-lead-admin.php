@@ -37,25 +37,25 @@ class MTTF_Lead_Admin {
 			return;
 		}
 
-		$ver = defined( 'MTTF_VERSION' ) ? MTTF_VERSION : '1.0.0';
+		$ver  = defined( 'MTTF_VERSION' ) ? MTTF_VERSION : '1.0.0';
 		$base = defined( 'MTTF_URL' ) ? MTTF_URL : plugin_dir_url( dirname( __FILE__ ) . '/../minh-thang-transport-flow.php' );
 
 		wp_enqueue_style(
 			'mttf-flatpickr',
-			$base . 'assets/vendor/flatpickr/flatpickr.min.css',
+			'https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css',
 			array(),
 			'4.6.13'
 		);
 		wp_enqueue_script(
 			'mttf-flatpickr',
-			$base . 'assets/vendor/flatpickr/flatpickr.min.js',
+			'https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js',
 			array(),
 			'4.6.13',
 			true
 		);
 		wp_enqueue_script(
 			'mttf-flatpickr-vn',
-			$base . 'assets/vendor/flatpickr/vn.js',
+			'https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/vn.js',
 			array( 'mttf-flatpickr' ),
 			'4.6.13',
 			true
