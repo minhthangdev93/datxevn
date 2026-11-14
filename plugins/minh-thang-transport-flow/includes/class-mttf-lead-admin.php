@@ -23,6 +23,50 @@ class MTTF_Lead_Admin {
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'add_menu' ) );
 		add_action( 'admin_init', array( __CLASS__, 'maybe_export_csv' ) );
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
+	}
+
+	/**
+	 * Flatpickr range picker on Lead admin only.
+	 *
+	 * @param string $hook Current admin hook.
+	 */
+	public static function enqueue_assets( $hook ) {
+		$page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( 'mttf-leads' !== $page ) {
+			return;
+		}
+
+		$ver = defined( 'MTTF_VERSION' ) ? MTTF_VERSION : '1.0.0';
+		$base = defined( 'MTTF_URL' ) ? MTTF_URL : plugin_dir_url( dirname( __FILE__ ) . '/../minh-thang-transport-flow.php' );
+
+		wp_enqueue_style(
+			'mttf-flatpickr',
+			$base . 'assets/vendor/flatpickr/flatpickr.min.css',
+			array(),
+			'4.6.13'
+		);
+		wp_enqueue_script(
+			'mttf-flatpickr',
+			$base . 'assets/vendor/flatpickr/flatpickr.min.js',
+			array(),
+			'4.6.13',
+			true
+		);
+		wp_enqueue_script(
+			'mttf-flatpickr-vn',
+			$base . 'assets/vendor/flatpickr/vn.js',
+			array( 'mttf-flatpickr' ),
+			'4.6.13',
+			true
+		);
+		wp_enqueue_script(
+			'mttf-leads-admin',
+			$base . 'assets/js/leads-admin.js',
+			array( 'mttf-flatpickr', 'mttf-flatpickr-vn' ),
+			$ver,
+			true
+		);
 	}
 
 	public static function add_menu() {
@@ -330,8 +374,27 @@ class MTTF_Lead_Admin {
 			);
 		}
 		echo '</select></label>';
-		echo '<label><span>Từ ngày:</span>&nbsp;<input type="date" name="date_from" value="' . esc_attr( $date_from ) . '"></label>';
-		echo '<label><span>Đến ngày:</span>&nbsp;<input type="date" name="date_to" value="' . esc_attr( $date_to ) . '"></label>';
+		$format_dmy = static function ( $ymd ) {
+			$parts = explode( '-', (string) $ymd );
+			if ( 3 !== count( $parts ) ) {
+				return (string) $ymd;
+			}
+			return $parts[2] . '/' . $parts[1] . '/' . $parts[0];
+		};
+		$range_display = '';
+		if ( '' !== $date_from && '' !== $date_to ) {
+			$range_display = $format_dmy( $date_from ) . ( $date_from === $date_to ? '' : ' → ' . $format_dmy( $date_to ) );
+		} elseif ( '' !== $date_from ) {
+			$range_display = $format_dmy( $date_from );
+		} elseif ( '' !== $date_to ) {
+			$range_display = $format_dmy( $date_to );
+		}
+
+		echo '<label for="mttf-leads-date-range"><span>Khoảng ngày:</span>&nbsp;';
+		echo '<input type="text" id="mttf-leads-date-range" class="regular-text" value="' . esc_attr( $range_display ) . '" placeholder="Chọn khoảng ngày" autocomplete="off" readonly>';
+		echo '</label>';
+		echo '<input type="hidden" name="date_from" id="mttf-leads-date-from" value="' . esc_attr( $date_from ) . '">';
+		echo '<input type="hidden" name="date_to" id="mttf-leads-date-to" value="' . esc_attr( $date_to ) . '">';
 		echo '<label><span>SĐT khách:</span>&nbsp;<input type="search" name="phone" class="regular-text" value="' . esc_attr( $phone_q ) . '" placeholder="VD: 097… hoặc +84" autocomplete="off"></label>';
 		submit_button( 'Lọc', 'secondary', '', false );
 		echo '</div>';
