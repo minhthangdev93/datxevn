@@ -16,6 +16,11 @@
 
 var LEADS_SHEET = 'Leads';
 var MATCH_SHEET = 'CustomerMatch';
+/** Tab cho kết nối Sheet động trên Google Ads (tách nhà xe). */
+var MATCH_SHEET_HK = 'CustomerMatch_HK';
+var MATCH_SHEET_G8 = 'CustomerMatch_G8';
+var SLUG_HK = 'hk-buslines';
+var SLUG_G8 = 'g8-open-tour';
 var LEADS_HEADERS = [
   'id',
   'created_at',
@@ -178,9 +183,21 @@ function syncLeads() {
   );
 }
 
+/**
+ * Ghi lại 1 tab Customer Match (cột Phone trước — Ads map dễ).
+ * @param {string} sheetName
+ * @param {Array<Array>} rows [[Phone, nha_xe, last_created_at], ...]
+ */
+function writeMatchSheet_(sheetName, rows) {
+  var sh = ensureSheet_(sheetName, ['Phone', 'nha_xe', 'last_created_at']);
+  sh.clearContents();
+  sh.getRange(1, 1, 1, 3).setValues([['Phone', 'nha_xe', 'last_created_at']]);
+  sh.setFrozenRows(1);
+  writeBlock_(sh, 2, rows);
+}
+
 function rebuildCustomerMatch() {
   var leads = ensureSheet_(LEADS_SHEET, LEADS_HEADERS);
-  var match = ensureSheet_(MATCH_SHEET, ['Phone', 'nha_xe', 'last_created_at']);
   var last = leads.getLastRow();
   var phones = {};
 
@@ -200,18 +217,26 @@ function rebuildCustomerMatch() {
     }
   }
 
-  var out = [];
+  var outAll = [];
+  var outHk = [];
+  var outG8 = [];
   var keys = Object.keys(phones);
   keys.sort();
   for (var k = 0; k < keys.length; k++) {
     var p = keys[k];
-    out.push([p, phones[p].nha, phones[p].created]);
+    var row = [p, phones[p].nha, phones[p].created];
+    outAll.push(row);
+    if (phones[p].nha === SLUG_HK) {
+      outHk.push(row);
+    } else if (phones[p].nha === SLUG_G8) {
+      outG8.push(row);
+    }
   }
 
-  match.clearContents();
-  match.getRange(1, 1, 1, 3).setValues([['Phone', 'nha_xe', 'last_created_at']]);
-  match.setFrozenRows(1);
-  writeBlock_(match, 2, out);
+  // Tab tổng + 2 tab tách — mỗi list Ads kết nối Sheet động trỏ 1 tab.
+  writeMatchSheet_(MATCH_SHEET, outAll);
+  writeMatchSheet_(MATCH_SHEET_HK, outHk);
+  writeMatchSheet_(MATCH_SHEET_G8, outG8);
 }
 
 function resetSyncCursor() {
