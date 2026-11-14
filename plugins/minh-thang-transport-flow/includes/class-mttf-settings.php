@@ -204,6 +204,34 @@ class MTTF_Settings {
 		);
 
 		add_settings_section(
+			'mttf_sheets_export_section',
+			'Google Sheets / Customer Match',
+			array( __CLASS__, 'sheets_export_section_intro' ),
+			self::SETTINGS_PAGE_LEAD
+		);
+
+		add_settings_field(
+			'sheets_export_enabled',
+			'Bật API đổ lead ra Sheet',
+			array( __CLASS__, 'render_checkbox_with_hidden' ),
+			self::SETTINGS_PAGE_LEAD,
+			'mttf_sheets_export_section',
+			array(
+				'key'         => 'sheets_export_enabled',
+				'label'       => 'Cho phép Apps Script kéo lead qua REST (token bắt buộc)',
+				'default_on' => false,
+			)
+		);
+
+		add_settings_field(
+			'sheets_export_token',
+			'Token API Sheets',
+			array( __CLASS__, 'render_sheets_export_token' ),
+			self::SETTINGS_PAGE_LEAD,
+			'mttf_sheets_export_section'
+		);
+
+		add_settings_section(
 			'mttf_measurement_section',
 			'Đo lường chuyển đổi lead (GTM / GA4)',
 			array( __CLASS__, 'measurement_section_intro' ),
@@ -446,6 +474,8 @@ class MTTF_Settings {
 			'telegram_chat_id_bac'                     => '',
 			'telegram_chat_id_trung'                   => '',
 			'telegram_chat_id_nam'                     => '',
+			'sheets_export_enabled'                    => 0,
+			'sheets_export_token'                      => '',
 		);
 	}
 
@@ -533,8 +563,59 @@ class MTTF_Settings {
 		if ( array_key_exists( 'telegram_chat_id_nam', $input ) ) {
 			$out['telegram_chat_id_nam'] = sanitize_text_field( $input['telegram_chat_id_nam'] );
 		}
+		if ( array_key_exists( 'sheets_export_enabled', $input ) ) {
+			$out['sheets_export_enabled'] = empty( $input['sheets_export_enabled'] ) ? 0 : 1;
+		}
+		if ( array_key_exists( 'sheets_export_token', $input ) ) {
+			$out['sheets_export_token'] = sanitize_text_field( $input['sheets_export_token'] );
+		}
+		if ( ! empty( $input['sheets_export_regenerate_token'] ) ) {
+			$out['sheets_export_token'] = self::generate_sheets_export_token();
+		}
+		if ( ! empty( $out['sheets_export_enabled'] ) && '' === (string) $out['sheets_export_token'] ) {
+			$out['sheets_export_token'] = self::generate_sheets_export_token();
+		}
 
 		return $out;
+	}
+
+	/**
+	 * @return string
+	 */
+	public static function generate_sheets_export_token() {
+		try {
+			return bin2hex( random_bytes( 24 ) );
+		} catch ( Exception $e ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch
+			return wp_generate_password( 48, false, false );
+		}
+	}
+
+	public static function sheets_export_section_intro() {
+		echo '<p>Sheet tự kéo lead từ WordPress (Apps Script). Dùng tab <code>CustomerMatch</code> để upload danh sách SĐT lên Google Ads Customer Match. Xem <code>docs/lead-sheets-apps-script.js</code> trong repo.</p>';
+	}
+
+	public static function render_sheets_export_token() {
+		$token = (string) self::get( 'sheets_export_token', '' );
+		$url   = class_exists( 'MTTF_Lead_Sheets_Export' ) ? MTTF_Lead_Sheets_Export::get_export_url() : rest_url( 'mttf/v1/leads-export' );
+		?>
+		<input
+			type="text"
+			class="regular-text code"
+			name="<?php echo esc_attr( self::OPTION_KEY . '[sheets_export_token]' ); ?>"
+			value="<?php echo esc_attr( $token ); ?>"
+			autocomplete="off"
+			spellcheck="false"
+		/>
+		<p>
+			<label>
+				<input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY . '[sheets_export_regenerate_token]' ); ?>" value="1" />
+				Tạo token mới khi lưu (vô hiệu token cũ trên Apps Script)
+			</label>
+		</p>
+		<p class="description">Endpoint: <code><?php echo esc_html( $url ); ?></code></p>
+		<p class="description">Ví dụ gọi: <code><?php echo esc_html( $url . '?token=YOUR_TOKEN&amp;since=2026-01-01' ); ?></code></p>
+		<p class="description">Apps Script nên gửi header <code>Authorization: Bearer …</code> thay vì gắn token trên URL.</p>
+		<?php
 	}
 
 	public static function render_input( $args ) {

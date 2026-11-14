@@ -304,6 +304,42 @@ class MTTF_Ajax {
 		return $phone;
 	}
 
+	/**
+	 * Convert stored/raw phone to E.164 for Google Ads Customer Match (+84…).
+	 *
+	 * @param string $raw_phone Raw or stored phone.
+	 * @return string E.164 or empty if not usable.
+	 */
+	public static function to_e164_phone( $raw_phone ) {
+		$cleaned = preg_replace( '/[^0-9+]/', '', sanitize_text_field( (string) $raw_phone ) );
+		if ( '' === $cleaned ) {
+			return '';
+		}
+
+		if ( 0 === strpos( $cleaned, '00' ) ) {
+			$cleaned = '+' . substr( $cleaned, 2 );
+		}
+
+		// Non-VN international already in E.164.
+		if ( 0 === strpos( $cleaned, '+' ) && 0 !== strpos( $cleaned, '+84' ) ) {
+			if ( 1 === preg_match( '/^\+[1-9][0-9]{7,14}$/', $cleaned ) ) {
+				return $cleaned;
+			}
+			return '';
+		}
+
+		$local = self::normalize_phone( $cleaned );
+		if ( 1 === preg_match( '/^0(?:3|5|7|8|9)[0-9]{8}$/', $local ) ) {
+			return '+84' . substr( $local, 1 );
+		}
+
+		if ( 1 === preg_match( '/^\+84(?:3|5|7|8|9)[0-9]{8}$/', $cleaned ) ) {
+			return $cleaned;
+		}
+
+		return '';
+	}
+
 	private static function is_valid_phone( $phone ) {
 		// Accept Vietnam mobile prefixes (03/05/07/08/09) with total length 10.
 		if ( 1 === preg_match( '/^0(?:3|5|7|8|9)[0-9]{8}$/', $phone ) ) {

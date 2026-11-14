@@ -52,6 +52,8 @@ require_once MTTF_PATH . 'includes/class-mttf-lead-notify.php';
 
 require_once MTTF_PATH . 'includes/class-mttf-lead-daily-digest.php';
 
+require_once MTTF_PATH . 'includes/class-mttf-lead-sheets-export.php';
+
 require_once MTTF_PATH . 'includes/class-mttf-activity-pings.php';
 
 require_once MTTF_PATH . 'includes/class-mttf-contact-counter.php';
@@ -127,6 +129,8 @@ add_action(
 		MTTF_Ajax::init();
 
 		MTTF_Lead_Daily_Digest::init();
+
+		MTTF_Lead_Sheets_Export::init();
 
 		MTTF_Activity_Pings::init();
 
